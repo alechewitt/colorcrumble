@@ -1,0 +1,15 @@
+application: colorcrumble
+version: original
+runtime: go
+api_version: go1
+
+# re-direct to index.html if no path is give
+handlers:
+
+- url: /dist/(.+)
+  static_files: dist/\1
+  upload: dist/(.*)
+
+- url: /.*
+  static_files: dist/index.html
+  upload: dist/index.html
