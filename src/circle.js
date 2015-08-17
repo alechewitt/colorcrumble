@@ -27,6 +27,7 @@ export default class Circle {
         this.f = 0;
 
         this.color = color;
+        this.name = "";
         this.erased = false;
     }
 

@@ -6,4 +6,6 @@ import Game from "./game.js";
 window.onload = function() {
     let game = new Game("gameCanvas", window.innerWidth, window.innerHeight);
     game.init();
+
+    window.GAME = game;
 };

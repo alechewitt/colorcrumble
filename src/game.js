@@ -7,6 +7,12 @@ import Circle from "./circle.js";
 import vertexShader from "./vertex-shader.vert";
 import fragmentShader from "./fragment-shader.frag";
 
+const erasedCircle = {
+    erased: true,
+    isErased: function() {
+        return true
+    }
+};
 export default class Game {
 
     constructor(canvasId, canvasWidth, canvasHeight) {
@@ -32,8 +38,11 @@ export default class Game {
         // Game Variables
         this.margin = 5 * this.devicePixelRatio;
         this.circlesPerRow = 0;
+        this.numRows = 20;
         this.circleRadius = 0.0;
-        this.circles = [];
+        this.circles = {};
+
+        this.animating = false;
     }
 
     init() {
@@ -42,7 +51,7 @@ export default class Game {
         this.initGL(shaderProgram);
         this.calculateCirclesRadius();
         this.createCircleBufferData();
-        this.createCircleArrays();
+        this.createGameGridObj();
         this.drawCircles();
         this.addEventHandlers();
     }
@@ -159,29 +168,29 @@ export default class Game {
      *      ....
      * ]
      */
-    createCircleArrays() {
+    createGameGridObj() {
         let offset = this.margin + (this.circleRadius * 2);
 
         let yTranslation = this.margin + this.circleRadius;
         let xTranslation = this.margin + this.circleRadius;
-        for (let i = 0; i < 20; i++) {
-            let circleRow = [];
+        for (let i = 0; i < this.numRows; i++) {
+            this.circles["row_" + i] = {};
             for (let k = 0; k < this.circlesPerRow; k++) {
 
                 // Random color:
                 let colorInt = Math.floor(Math.random() * colors.length);
 
                 // Create a new circle
-                let circle = new Circle(colors[colorInt]);
+                let circle = new Circle(colors[colorInt].color);
+                circle.name = colors[colorInt].name + "___rowinitial_" + i + "___colinitial_" + k;
                 circle.translate(xTranslation, yTranslation);
 
                 // Add it to our array of circles
-                circleRow.push(circle);
+                this.circles["row_" + i]["col_" + k] = circle;
 
                 // Increment the translation for the next circle:
                 xTranslation += offset;
             }
-            this.circles.push(circleRow);
 
             yTranslation += offset;
             xTranslation = this.margin + this.circleRadius;
@@ -193,41 +202,87 @@ export default class Game {
     }
 
     doMouseDown() {
-        let x = event.clientX * this.devicePixelRatio;
-        let y = event.clientY * this.devicePixelRatio;
-        console.log("X: ", x);
-        console.log("Y: ", y);
-        for (let row = 0; row < this.circles.length; row++) {
-            let lastRow = row === this.circles.length - 1;
-            if (lastRow || y < this.circles[row + 1][0].getCenterY() - this.circleRadius) {
-                console.log("Row clicked = ", row);
-                // Now lets find x clicked:
-                for (let col = 0; col < this.circles[row].length; col++) {
-                    let lastCol = col === this.circles[row].length - 1;
-                    if (lastCol || x < this.circles[row][col + 1].getCenterX() - this.circleRadius) {
-                        // We have row and col of our circle. Lets make it disappear!
-                        this.animateDisappearance(this.circles[row][col]);
-                        return;
-                    }
-                }
-            }
+        if (!this.animating) {
+            this.animating = true;
+            let x = event.clientX * this.devicePixelRatio;
+            let y = event.clientY * this.devicePixelRatio;
+            console.log("X: ", x);
+            console.log("Y: ", y);
+            // Row number = Floor( (x - margin) / (diameter + margin));
+            let col = Math.floor((x - this.margin) / ((2 * this.circleRadius) + this.margin));
+            let row = Math.floor((y-this.margin) / (( 2 * this.circleRadius) + this.margin));
+            this.animateDisappearance(this.circles["row_" + row]["col_" + col], row, col);
         }
+
     }
 
-    animateDisappearance(circle) {
+    animateDisappearance(circle, circleRow, circleCol) {
+        console.log("animating disppearance circleRow: ", circleRow);
+        let self = this;
         if (circle.getScaleFactor() <= 0.1) {
             circle.erased = true;
+            // Make all circles above fall down
+            self.animateCirclesFalling(circleRow, circleCol);
         }
         else {
             circle.scale(0.8);
-            let self = this;
-            window.requestAnimationFrame(function() {
-                self.animateDisappearance(circle);
+            window.requestAnimationFrame(function () {
+                self.animateDisappearance(circle, circleRow, circleCol);
             });
         }
         this.drawCircles();
     }
 
+    animateCirclesFalling(circleRow, circleCol) {
+        let self = this;
+        let totalFall = 0;
+        let distanceToFall = (2 * this.circleRadius) + this.margin;
+        let colKey = "col_" + circleCol;
+        console.log("Distance to fall: ", distanceToFall);
+        function fall() {
+            console.log("Falling circleRow: ", circleRow);
+            totalFall += 3;
+            // For every row above our circle that has dissappeared:
+            for (let row = 0; row < circleRow; row++) {
+                if (! self.circles["row_" + row][colKey].erased) {
+                    // Translate one pixel down:
+                    self.circles["row_" + row][colKey].translate(0, 3);
+                }
+            }
+            self.drawCircles();
+            if (totalFall <= distanceToFall) {
+                window.requestAnimationFrame(fall);
+            }
+            else {
+                // We have finished animating Lets update the gridObj with the circles in their new correct places
+                let lowestDeleted = 0;
+                for (let row = circleRow; row >=1; row--) {
+                    let rowUp = row - 1;
+                    if (!self.circles["row_"+rowUp][colKey].erased) {
+                        // Row above is not erased, so lets copy it down;
+                        self.circles["row_" + row][colKey] = self.circles["row_"+rowUp][colKey];
+                    }
+                    else {
+                        // Row above is erased so no more copying needed
+                        lowestDeleted = row;
+                        break;
+                    }
+                }
+
+                console.log("Logging lowest deleted: ", lowestDeleted);
+                for (let erasedRow = 0; erasedRow <=lowestDeleted; erasedRow ++) {
+                    console.log("Erasing row: ", erasedRow);
+                    console.log("Logging tobe erased row: ", self.circles["row_" + erasedRow]);
+
+                    self.circles["row_" + erasedRow][colKey] = erasedCircle;
+                }
+
+                console.log("Logging final circles: ", self.circles);
+                self.animating = false;
+            }
+        }
+        fall();
+    }
 
 
     drawCircles() {
@@ -235,17 +290,19 @@ export default class Game {
         this.gl.clear(this.gl.COLOR_BUFFER_BIT);
 
 
-        for (let i = 0; i < this.circles.length; i++) {
-            for (let k = 0; k < this.circles[i].length; k++) {
-                if (this.circles[i][k].isErased()) {
+        for (let i = 0; i < this.numRows; i++) {
+            for (let k = 0; k < this.circlesPerRow; k++) {
+                let rowKey = "row_" + i;
+                let colKey = "col_" + k;
+                if (this.circles[rowKey][colKey].isErased()) {
                     // This circle has been erased. Lets not draw it and continue to next one.
                     continue;
                 }
                 // Set the u_transform variable
-                this.gl.uniformMatrix3fv(this.uniformTransform, false, this.circles[i][k].getMat3());
+                this.gl.uniformMatrix3fv(this.uniformTransform, false, this.circles[rowKey][colKey].getMat3());
 
                 // Set u_color variable value:
-                this.gl.uniform3fv(this.uniformColor, this.circles[i][k].getColor());
+                this.gl.uniform3fv(this.uniformColor, this.circles[rowKey][colKey].getColor());
                 // Draw a circle
                 this.gl.bindBuffer(this.gl.ARRAY_BUFFER, this.bufferCoordsCircle);
                 this.gl.vertexAttribPointer(this.attributeCoords, 2, this.gl.FLOAT, false, 0, 0);
