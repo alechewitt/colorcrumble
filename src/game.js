@@ -238,9 +238,7 @@ export default class Game {
         let totalFall = 0;
         let distanceToFall = (2 * this.circleRadius) + this.margin;
         let colKey = "col_" + circleCol;
-        console.log("Distance to fall: ", distanceToFall);
         function fall() {
-            console.log("Falling circleRow: ", circleRow);
             totalFall += 3;
             // For every row above our circle that has dissappeared:
             for (let row = 0; row < circleRow; row++) {
@@ -268,16 +266,9 @@ export default class Game {
                         break;
                     }
                 }
-
-                console.log("Logging lowest deleted: ", lowestDeleted);
                 for (let erasedRow = 0; erasedRow <=lowestDeleted; erasedRow ++) {
-                    console.log("Erasing row: ", erasedRow);
-                    console.log("Logging tobe erased row: ", self.circles["row_" + erasedRow]);
-
                     self.circles["row_" + erasedRow][colKey] = erasedCircle;
                 }
-
-                console.log("Logging final circles: ", self.circles);
                 self.animating = false;
             }
         }
