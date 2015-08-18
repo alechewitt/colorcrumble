@@ -1,5 +1,5 @@
 application: colorcrumble
-version: original
+version: webgl
 runtime: go
 api_version: go1
 
@@ -13,3 +13,12 @@ handlers:
 - url: /.*
   static_files: dist/index.html
   upload: dist/index.html
+
+skip_files:
+- ^(.*/)?#.*#$
+- ^(.*/)?.*~$
+- ^(.*/)?.*\.py[co]$
+- ^(.*/)?.*/RCS/.*$
+- ^(.*/)?\..*$
+- ^\.idea$
+- ^node_modules$

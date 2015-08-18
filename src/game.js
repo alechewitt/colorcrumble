@@ -17,8 +17,10 @@ const erasedCircle = {
 const ACCELERATION = 9.8;
 
 // Pixels per meter
-const SCALE_FACTOR = 270;
+// Increase this will increase the apparent speed the circles fall down with
+const SCALE_FACTOR = 800;
 
+// How Much energy is preserved when the circles bounce off each other.
 const COEF_RESTITUTION = 0.5;
 
 export default class Game {
@@ -293,6 +295,16 @@ export default class Game {
 
     }
 
+    /**
+     * Method will continually call
+     * @param fallingCircles
+     * @param initialTime
+     * @param initialVelocity
+     * @param distanceToSurface
+     * @param distanceToFinish
+     * @param bouncesLeft
+     * @param finishedCb
+     */
     recursiveDrop(fallingCircles, initialTime, initialVelocity, distanceToSurface, distanceToFinish, bouncesLeft, finishedCb) {
         let self = this;
         let timeNow = new Date().getTime();
@@ -348,10 +360,11 @@ export default class Game {
             });
         }
         else {
-            console.error("!");
-            console.log("Distance: ", distance);
-            console.log("DistanceToSurface: ", distanceToSurface);
-            console.log("DistanceToFinish: ", distanceToFinish);
+            // We should never land here:
+            // todo: determine if valid reason for landing here.
+            //console.log("Distance: ", distance);
+            //console.log("DistanceToSurface: ", distanceToSurface);
+            //console.log("DistanceToFinish: ", distanceToFinish);
             window.requestAnimationFrame(finishedCb);
         }
 
