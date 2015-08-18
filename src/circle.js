@@ -1,30 +1,26 @@
 "use strict";
 
-/**
- * Represents a 2d transformation matrix in column major orientation:
- *
- *   a  b  0
- *   c  d  0
- *   e  f  1
- *
- * The equivalent row major orientation would be:
- *
- *   a  c  e
- *   b  d  f
- *   0  0  1
- *
- * This represents a transformation of the coordinates (x, y) to
- * ( a*x + c*y + e, b*x + d*y + e )
- */
 export default class Circle {
 
     constructor(color) {
-        this.a = 1;
-        this.b = 0;
-        this.c = 0;
-        this.d = 1;
-        this.e = 0;
-        this.f = 0;
+        /**
+         * Represents a 2d transformation matrix in column major orientation:
+         *
+         *   a  b  0
+         *   c  d  0
+         *   e  f  1
+         *
+         * This represents a transformation of the coordinates (x, y) to
+         * ( a*x + c*y + e, b*x + d*y + e )
+         */
+        this.transMatrix = {
+            a: 1,
+            b: 0,
+            c: 0,
+            d: 1,
+            e: 0,
+            f: 0
+        };
 
         this.color = color;
         this.name = "";
@@ -33,10 +29,20 @@ export default class Circle {
 
     getMat3() {
         return [
-            this.a, this.b, 0,
-            this.c, this.d, 0,
-            this.e, this.f, 0
+            this.transMatrix.a, this.transMatrix.b, 0,
+            this.transMatrix.c, this.transMatrix.d, 0,
+            this.transMatrix.e, this.transMatrix.f, 0
         ];
+    }
+
+    // An array in the same format that getMat3 returns
+    setMat3(matrix) {
+        this.transMatrix.a = matrix[0];
+        this.transMatrix.b = matrix[1];
+        this.transMatrix.c = matrix[3];
+        this.transMatrix.d = matrix[4];
+        this.transMatrix.e = matrix[6];
+        this.transMatrix.f = matrix[7];
     }
 
 
@@ -51,30 +57,30 @@ export default class Circle {
 
 
     translate(dx, dy) {
-        this.e += dx;
-        this.f += dy;
+        this.transMatrix.e += dx;
+        this.transMatrix.f += dy;
     }
 
 
     scale(scaleFactor) {
-        this.a *= scaleFactor;
-        this.b *= scaleFactor;
-        this.c *= scaleFactor;
-        this.d *= scaleFactor;
+        this.transMatrix.a *= scaleFactor;
+        this.transMatrix.b *= scaleFactor;
+        this.transMatrix.c *= scaleFactor;
+        this.transMatrix.d *= scaleFactor;
     }
 
 
     getScaleFactor() {
-        return this.a;
+        return this.transMatrix.a;
     }
 
 
     getCenterX() {
-        return this.e;
+        return this.transMatrix.e;
     }
 
     getCenterY() {
-        return this.f;
+        return this.transMatrix.f;
     }
 
 }

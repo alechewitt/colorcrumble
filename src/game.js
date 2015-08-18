@@ -8,11 +8,19 @@ import vertexShader from "./vertex-shader.vert";
 import fragmentShader from "./fragment-shader.frag";
 
 const erasedCircle = {
-    erased: true,
-    isErased: function() {
+    erased  : true,
+    isErased: function () {
         return true
     }
 };
+
+const ACCELERATION = 9.8;
+
+// Pixels per meter
+const SCALE_FACTOR = 270;
+
+const COEF_RESTITUTION = 0.5;
+
 export default class Game {
 
     constructor(canvasId, canvasWidth, canvasHeight) {
@@ -36,7 +44,7 @@ export default class Game {
         this.bufferCoordsCircle = null;
 
         // Game Variables
-        this.margin = 5 * this.devicePixelRatio;
+        this.margin = 7 * this.devicePixelRatio;
         this.circlesPerRow = 0;
         this.numRows = 20;
         this.circleRadius = 0.0;
@@ -160,13 +168,13 @@ export default class Game {
     }
 
     /**
-     * Create an array of arrays of circle's. Each sub array is a row of circles.
+     * Create an object with the circles in row then column.
      * eg:
-     * [
-     *      [Circle, Circle... ],
-     *      [Circle, Circle... ],
+     * {
+     *      "row_0": {"col_0": Circle,  "col_1": Circle ... },
+     *      "row_1": {"col_0": Circle,  "col_1": Circle ... }
      *      ....
-     * ]
+     * }
      */
     createGameGridObj() {
         let offset = this.margin + (this.circleRadius * 2);
@@ -206,31 +214,35 @@ export default class Game {
             this.animating = true;
             let x = event.clientX * this.devicePixelRatio;
             let y = event.clientY * this.devicePixelRatio;
-            console.log("X: ", x);
-            console.log("Y: ", y);
+
             // Row number = Floor( (x - margin) / (diameter + margin));
             let col = Math.floor((x - this.margin) / ((2 * this.circleRadius) + this.margin));
-            let row = Math.floor((y-this.margin) / (( 2 * this.circleRadius) + this.margin));
-            this.animateDisappearance(this.circles["row_" + row]["col_" + col], row, col);
+            let row = Math.floor((y - this.margin) / (( 2 * this.circleRadius) + this.margin));
+            let circle = this.circles["row_" + row]["col_" + col];
+            if (!circle.isErased()) {
+                this.animateDisappearance(this.circles["row_" + row]["col_" + col], row, col);
+            }
+            else {
+                this.animating = false;
+            }
         }
 
     }
 
     animateDisappearance(circle, circleRow, circleCol) {
-        console.log("animating disppearance circleRow: ", circleRow);
         let self = this;
-        if (circle.getScaleFactor() <= 0.1) {
-            circle.erased = true;
+        if (circle.getScaleFactor() <= 0.25) {
+            //circle.erased = true;
             // Make all circles above fall down
             self.animateCirclesFalling(circleRow, circleCol);
         }
         else {
             circle.scale(0.8);
+            this.drawCircles();
             window.requestAnimationFrame(function () {
                 self.animateDisappearance(circle, circleRow, circleCol);
             });
         }
-        this.drawCircles();
     }
 
     animateCirclesFalling(circleRow, circleCol) {
@@ -238,41 +250,113 @@ export default class Game {
         let totalFall = 0;
         let distanceToFall = (2 * this.circleRadius) + this.margin;
         let colKey = "col_" + circleCol;
-        function fall() {
-            totalFall += 3;
-            // For every row above our circle that has dissappeared:
-            for (let row = 0; row < circleRow; row++) {
-                if (! self.circles["row_" + row][colKey].erased) {
-                    // Translate one pixel down:
-                    self.circles["row_" + row][colKey].translate(0, 3);
-                }
-            }
-            self.drawCircles();
-            if (totalFall <= distanceToFall) {
-                window.requestAnimationFrame(fall);
+        let firstTime = new Date().getTime();
+
+        let fallingCircles = [];
+        let savedMats = [];
+        // Update circles grid object with the circles positions to be.
+        let lowestDeleted = 0;
+        for (let row = circleRow; row >= 1; row--) {
+            let rowUp = row - 1;
+            if (!self.circles["row_" + rowUp][colKey].erased) {
+                // Row above is not erased, so lets copy it down;
+                self.circles["row_" + row][colKey] = self.circles["row_" + rowUp][colKey];
+                fallingCircles.push(self.circles["row_" + row][colKey]);
+                savedMats.push(self.circles["row_" + row][colKey].getMat3());
             }
             else {
-                // We have finished animating Lets update the gridObj with the circles in their new correct places
-                let lowestDeleted = 0;
-                for (let row = circleRow; row >=1; row--) {
-                    let rowUp = row - 1;
-                    if (!self.circles["row_"+rowUp][colKey].erased) {
-                        // Row above is not erased, so lets copy it down;
-                        self.circles["row_" + row][colKey] = self.circles["row_"+rowUp][colKey];
-                    }
-                    else {
-                        // Row above is erased so no more copying needed
-                        lowestDeleted = row;
-                        break;
-                    }
-                }
-                for (let erasedRow = 0; erasedRow <=lowestDeleted; erasedRow ++) {
-                    self.circles["row_" + erasedRow][colKey] = erasedCircle;
-                }
-                self.animating = false;
+                // Row above is erased so no more copying needed
+                lowestDeleted = row;
+                break;
             }
         }
-        fall();
+        for (let erasedRow = 0; erasedRow <= lowestDeleted; erasedRow++) {
+            self.circles["row_" + erasedRow][colKey] = erasedCircle;
+        }
+
+        if (fallingCircles.length > 0) {
+            let distanceToNextBallSurface = (distanceToFall + this.margin) / SCALE_FACTOR;
+            let distanceToRest = distanceToFall / SCALE_FACTOR;
+            this.recursiveDrop(fallingCircles, firstTime, 0, distanceToNextBallSurface, distanceToRest, 1,
+                function () {
+                    // Finished animating to as near as possible
+                    for (let i = 0; i < savedMats.length; i++) {
+                        fallingCircles[i].setMat3(savedMats[i]);
+                        fallingCircles[i].translate(0, distanceToFall);
+                    }
+                    self.drawCircles();
+                    self.animating = false;
+                });
+        } else {
+            self.drawCircles();
+            self.animating = false;
+        }
+
+    }
+
+    recursiveDrop(fallingCircles, initialTime, initialVelocity, distanceToSurface, distanceToFinish, bouncesLeft, finishedCb) {
+        let self = this;
+        let timeNow = new Date().getTime();
+        let deltaT = (timeNow - initialTime) / 1000;
+        // s = ut + 0.5at^2
+        let distance = (initialVelocity * deltaT) + (0.5 * ACCELERATION * Math.pow(deltaT, 2));
+        let finalVelocity;
+        if (distance <= distanceToSurface) {
+            distanceToSurface -= distance;
+            distanceToFinish -= distance;
+            finalVelocity = initialVelocity + (ACCELERATION * deltaT);
+            for (let circle of fallingCircles) {
+                circle.translate(0, distance * SCALE_FACTOR);
+            }
+            this.drawCircles();
+            let goingDown = distance > 0;
+            if (bouncesLeft === 0 && goingDown && distanceToFinish <= 0) {
+                // This is now the nearest to where we stop it moving
+                window.requestAnimationFrame(finishedCb);
+            } else {
+                window.requestAnimationFrame(function () {
+                    self.recursiveDrop(fallingCircles, timeNow, finalVelocity, distanceToSurface, distanceToFinish, bouncesLeft, finishedCb);
+                })
+            }
+
+        } else if (bouncesLeft > 0) {
+            // This is a bounce
+            bouncesLeft -= 1;
+            // v^2 = u^2 + 2as
+            let velocityBeforeBounce = Math.sqrt(Math.pow(initialVelocity, 2) + (2 * ACCELERATION * distanceToSurface));
+            // v = u + at;
+            let timeBeforeBounce = (velocityBeforeBounce - initialVelocity) / ACCELERATION;
+            // speed after = coeficient of restitution * speed before bounce
+            let velocityAfterBounce = -1 * COEF_RESTITUTION * velocityBeforeBounce;
+            let timeAfterBounce = deltaT - timeBeforeBounce;
+            // s = ut + 0.5at^2
+            let distanceAboveBounce = (velocityAfterBounce * timeAfterBounce) + (0.5 * ACCELERATION * Math.pow(timeAfterBounce, 2));
+            // v = u + at
+            finalVelocity = velocityAfterBounce + (ACCELERATION * timeAfterBounce);
+
+            for (let circle of fallingCircles) {
+                // Translate to bottom of bounce
+                circle.translate(0, distanceToSurface * SCALE_FACTOR);
+                // Then translate up again.
+                circle.translate(0, distanceAboveBounce * SCALE_FACTOR);
+            }
+            let totalDistanceTraveled = distanceAboveBounce + distanceToSurface;
+            distanceToFinish = distanceToFinish - totalDistanceTraveled;
+            distanceToSurface = distanceToSurface - totalDistanceTraveled;
+            this.drawCircles();
+            window.requestAnimationFrame(function () {
+                self.recursiveDrop(fallingCircles, timeNow, finalVelocity, distanceToSurface, distanceToFinish, bouncesLeft, finishedCb)
+            })
+        }
+        else {
+            console.error("!");
+            console.log("Distance: ", distance);
+            console.log("DistanceToSurface: ", distanceToSurface);
+            console.log("DistanceToFinish: ", distanceToFinish);
+            window.requestAnimationFrame(finishedCb);
+        }
+
+
     }
 
 
