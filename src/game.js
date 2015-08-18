@@ -10,7 +10,7 @@ import fragmentShader from "./fragment-shader.frag";
 const erasedCircle = {
     erased  : true,
     isErased: function () {
-        return true
+        return true;
     }
 };
 
@@ -247,7 +247,6 @@ export default class Game {
 
     animateCirclesFalling(circleRow, circleCol) {
         let self = this;
-        let totalFall = 0;
         let distanceToFall = (2 * this.circleRadius) + this.margin;
         let colKey = "col_" + circleCol;
         let firstTime = new Date().getTime();
@@ -316,7 +315,7 @@ export default class Game {
             } else {
                 window.requestAnimationFrame(function () {
                     self.recursiveDrop(fallingCircles, timeNow, finalVelocity, distanceToSurface, distanceToFinish, bouncesLeft, finishedCb);
-                })
+                });
             }
 
         } else if (bouncesLeft > 0) {
@@ -345,8 +344,8 @@ export default class Game {
             distanceToSurface = distanceToSurface - totalDistanceTraveled;
             this.drawCircles();
             window.requestAnimationFrame(function () {
-                self.recursiveDrop(fallingCircles, timeNow, finalVelocity, distanceToSurface, distanceToFinish, bouncesLeft, finishedCb)
-            })
+                self.recursiveDrop(fallingCircles, timeNow, finalVelocity, distanceToSurface, distanceToFinish, bouncesLeft, finishedCb);
+            });
         }
         else {
             console.error("!");
