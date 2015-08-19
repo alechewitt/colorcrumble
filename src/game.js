@@ -215,7 +215,7 @@ export default class Game {
         this.canvas.addEventListener("mousedown", this.doMouseDown.bind(this), false);
     }
 
-    doMouseDown() {
+    doMouseDown(event) {
         if (!this.animating) {
             this.animating = true;
             let x = event.clientX * this.devicePixelRatio;
