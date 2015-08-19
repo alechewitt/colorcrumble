@@ -83,7 +83,8 @@ export default class Game {
             antialias: true
         };
 
-        this.gl = this.canvas.getContext("webgl", options);
+        this.gl = this.canvas.getContext("webgl", options) ||
+            this.canvas.getContext("experimental-webgl", options);
     }
 
     createShaderProgram(vertexShaderSource, fragmentShaderSource) {
