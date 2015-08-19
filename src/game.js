@@ -48,7 +48,7 @@ export default class Game {
         // Game Variables
         this.margin = 7 * this.devicePixelRatio;
         this.circlesPerRow = 0;
-        this.numRows = 20;
+        this.numRows = 0;
         this.circleRadius = 0.0;
         this.circles = {};
 
@@ -146,6 +146,10 @@ export default class Game {
         // Calculate circle sizes
         let remainingSpace = this.canvas.width - ((this.circlesPerRow * this.margin) + this.margin);
         this.circleRadius = (remainingSpace / this.circlesPerRow) / 2;
+
+        // Calculate number rows
+        let floatNumRows = (this.canvas.height - this.margin) / ((this.circleRadius * 2) + this.margin);
+        this.numRows = Math.ceil(floatNumRows);
 
         console.log("Circle radius: ", this.circleRadius);
     }
