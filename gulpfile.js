@@ -2,6 +2,7 @@
 const path = require("path");
 const babelify = require("babelify");
 const browserify = require("browserify");
+const browserifyShader = require("browserify-shader");
 const watchify = require("watchify");
 const buffer = require("vinyl-buffer");
 const source = require("vinyl-source-stream");
@@ -75,15 +76,14 @@ gulp.task("build-sources", [], function () {
         bundler = browserify(browserifyOptions);
     }
 
-    bundler.transform('browserify-shader');
 
-    bundler.external("angular")
-        .external("ngAnimate")
+    bundler
         .transform(babelify.configure({
             sourceMapRelative: __dirname + "/public/src",
             optional         : ["runtime"],
             compact          : false
-        }));
+        }))
+        .transform(browserifyShader);
 
     if (watch) {
         bundler.on("update", function () {

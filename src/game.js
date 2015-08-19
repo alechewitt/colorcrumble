@@ -7,6 +7,9 @@ import Circle from "./circle.js";
 import vertexShader from "./vertex-shader.vert";
 import fragmentShader from "./fragment-shader.frag";
 
+
+
+
 const erasedCircle = {
     erased  : true,
     isErased: function () {
