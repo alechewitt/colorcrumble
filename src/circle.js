@@ -24,7 +24,6 @@ export default class Circle {
 
         this.color = color;
         this.name = "";
-        this.erased = false;
     }
 
     getMat3() {
@@ -44,12 +43,6 @@ export default class Circle {
         this.transMatrix.e = matrix[6];
         this.transMatrix.f = matrix[7];
     }
-
-
-    isErased() {
-        return this.erased;
-    }
-
 
     getColor() {
         return this.color;

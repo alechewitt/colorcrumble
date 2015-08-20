@@ -7,16 +7,6 @@ import Circle from "./circle.js";
 import vertexShader from "./vertex-shader.vert";
 import fragmentShader from "./fragment-shader.frag";
 
-
-
-
-const erasedCircle = {
-    erased  : true,
-    isErased: function () {
-        return true;
-    }
-};
-
 const ACCELERATION = 9.8;
 
 // Pixels per meter
@@ -229,12 +219,7 @@ export default class Game {
             let col = Math.floor((x - this.margin) / ((2 * this.circleRadius) + this.margin));
             let row = Math.floor((y - this.margin) / (( 2 * this.circleRadius) + this.margin));
             let circle = this.circles["row_" + row]["col_" + col];
-            if (!circle.isErased()) {
-                this.animateDisappearance(this.circles["row_" + row]["col_" + col], row, col);
-            }
-            else {
-                this.animating = false;
-            }
+            this.animateDisappearance(circle, row, col);
         }
 
     }
@@ -267,21 +252,30 @@ export default class Game {
         let lowestDeleted = 0;
         for (let row = circleRow; row >= 1; row--) {
             let rowUp = row - 1;
-            if (!self.circles["row_" + rowUp][colKey].erased) {
-                // Row above is not erased, so lets copy it down;
-                self.circles["row_" + row][colKey] = self.circles["row_" + rowUp][colKey];
-                fallingCircles.push(self.circles["row_" + row][colKey]);
-                savedMats.push(self.circles["row_" + row][colKey].getMat3());
-            }
-            else {
-                // Row above is erased so no more copying needed
-                lowestDeleted = row;
+            // Row above is not erased, so lets copy it down;
+            self.circles["row_" + row][colKey] = self.circles["row_" + rowUp][colKey];
+            fallingCircles.push(self.circles["row_" + row][colKey]);
+            savedMats.push(self.circles["row_" + row][colKey].getMat3());
+        }
+
+        // random color for new circle not same as color underneath
+        let newColor;
+        while (true) {
+            let colorInt = Math.floor(Math.random() * colors.length);
+            newColor = colors[colorInt].color;
+            if (newColor !== self.circles["row_1"][colKey].getColor()) {
                 break;
             }
         }
-        for (let erasedRow = 0; erasedRow <= lowestDeleted; erasedRow++) {
-            self.circles["row_" + erasedRow][colKey] = erasedCircle;
-        }
+        console.log("Logging new color", newColor);
+        // Now create a new circle to be added to the object at the top
+        let newCircle = new Circle(newColor);
+        newCircle.setMat3(self.circles["row_1"][colKey].getMat3());
+        newCircle.translate(0, -1 * distanceToFall);
+        this.circles["row_0"][colKey] = newCircle;
+        // Add to the circles to be animated downwards
+        fallingCircles.push(newCircle);
+        savedMats.push(newCircle.getMat3());
 
         if (fallingCircles.length > 0) {
             let distanceToNextBallSurface = (distanceToFall + this.margin) / SCALE_FACTOR;
@@ -389,10 +383,6 @@ export default class Game {
             for (let k = 0; k < this.circlesPerRow; k++) {
                 let rowKey = "row_" + i;
                 let colKey = "col_" + k;
-                if (this.circles[rowKey][colKey].isErased()) {
-                    // This circle has been erased. Lets not draw it and continue to next one.
-                    continue;
-                }
                 // Set the u_transform variable
                 this.gl.uniformMatrix3fv(this.uniformTransform, false, this.circles[rowKey][colKey].getMat3());
 
