@@ -219,45 +219,69 @@ export default class Game {
             let col = Math.floor((x - this.margin) / ((2 * this.circleRadius) + this.margin));
             let row = Math.floor((y - this.margin) / (( 2 * this.circleRadius) + this.margin));
             let circle = this.circles["row_" + row]["col_" + col];
-            this.animateDisappearance(circle, row, col);
-        }
+            let self = this;
+            let topCircleMatrix = this.circles["row_0"]["col_" + col].getMat3();
+            let fallingCircles;
+            let savedMats;
+            let distanceToFall = (2 * self.circleRadius) + self.margin;
+            this.animateDisappearance(circle).
+                then(function () {
+                    [fallingCircles, savedMats] = self.updateCirclesObj(row, col, topCircleMatrix);
 
+                    let distanceToNextBallSurface = (distanceToFall + self.margin) / SCALE_FACTOR;
+                    let distanceToRest = distanceToFall / SCALE_FACTOR;
+                    let firstTime = new Date().getTime();
+                    return self.recursiveDrop(fallingCircles, firstTime, 0, distanceToNextBallSurface, distanceToRest, 1);
+                })
+                .then(function () {
+                    // Finished animating to as near as possible
+                    for (let i = 0; i < savedMats.length; i++) {
+                        fallingCircles[i].setMat3(savedMats[i]);
+                        fallingCircles[i].translate(0, distanceToFall);
+                    }
+                    self.drawCircles();
+                    self.animating = false;
+                });
+        }
     }
 
-    animateDisappearance(circle, circleRow, circleCol) {
+
+    animateDisappearance(circle, deferred = {}) {
+        if (!deferred.hasOwnProperty("resolve")) {
+            deferred.promise = new Promise(function (resolve, reject) {
+                deferred.resolve = resolve;
+                deferred.reject = reject;
+            });
+        }
         let self = this;
         if (circle.getScaleFactor() <= 0.25) {
-            //circle.erased = true;
-            // Make all circles above fall down
-            self.animateCirclesFalling(circleRow, circleCol);
+            deferred.resolve();
         }
         else {
             circle.scale(0.8);
             this.drawCircles();
             window.requestAnimationFrame(function () {
-                self.animateDisappearance(circle, circleRow, circleCol);
+                self.animateDisappearance(circle, deferred);
             });
         }
+        return deferred.promise;
     }
 
-    animateCirclesFalling(circleRow, circleCol) {
+    updateCirclesObj(circleRow, circleCol, topCircleMatrix) {
         let self = this;
-        let distanceToFall = (2 * this.circleRadius) + this.margin;
         let colKey = "col_" + circleCol;
-        let firstTime = new Date().getTime();
-
+        let distanceToFall = (2 * this.circleRadius) + this.margin;
         let fallingCircles = [];
         let savedMats = [];
         // Update circles grid object with the circles positions to be.
-        let lowestDeleted = 0;
         for (let row = circleRow; row >= 1; row--) {
             let rowUp = row - 1;
-            // Row above is not erased, so lets copy it down;
             self.circles["row_" + row][colKey] = self.circles["row_" + rowUp][colKey];
             fallingCircles.push(self.circles["row_" + row][colKey]);
             savedMats.push(self.circles["row_" + row][colKey].getMat3());
         }
 
+        // == Create the new circles ==
         // random color for new circle not same as color underneath
         let newColor;
         while (true) {
@@ -267,34 +291,16 @@ export default class Game {
                 break;
             }
         }
-        console.log("Logging new color", newColor);
-        // Now create a new circle to be added to the object at the top
+        // Create a new circle to be added to the object at the top
         let newCircle = new Circle(newColor);
-        newCircle.setMat3(self.circles["row_1"][colKey].getMat3());
+        newCircle.setMat3(topCircleMatrix);
         newCircle.translate(0, -1 * distanceToFall);
         this.circles["row_0"][colKey] = newCircle;
         // Add to the circles to be animated downwards
         fallingCircles.push(newCircle);
         savedMats.push(newCircle.getMat3());
 
-        if (fallingCircles.length > 0) {
-            let distanceToNextBallSurface = (distanceToFall + this.margin) / SCALE_FACTOR;
-            let distanceToRest = distanceToFall / SCALE_FACTOR;
-            this.recursiveDrop(fallingCircles, firstTime, 0, distanceToNextBallSurface, distanceToRest, 1,
-                function () {
-                    // Finished animating to as near as possible
-                    for (let i = 0; i < savedMats.length; i++) {
-                        fallingCircles[i].setMat3(savedMats[i]);
-                        fallingCircles[i].translate(0, distanceToFall);
-                    }
-                    self.drawCircles();
-                    self.animating = false;
-                });
-        } else {
-            self.drawCircles();
-            self.animating = false;
-        }
-
+        return [fallingCircles, savedMats];
     }
 
     /**
@@ -305,10 +311,17 @@ export default class Game {
      * @param distanceToSurface
      * @param distanceToFinish
      * @param bouncesLeft
-     * @param finishedCb
+     * @param deferred
      */
-    recursiveDrop(fallingCircles, initialTime, initialVelocity, distanceToSurface, distanceToFinish, bouncesLeft, finishedCb) {
+    recursiveDrop(fallingCircles, initialTime, initialVelocity, distanceToSurface, distanceToFinish, bouncesLeft, deferred = {}) {
         let self = this;
+        // Create a promise if we don't already have one
+        if (!deferred.hasOwnProperty("resolve")) {
+            deferred.promise = new Promise(function (resolve, reject) {
+                deferred.resolve = resolve;
+                deferred.reject = reject;
+            });
+        }
         let timeNow = new Date().getTime();
         let deltaT = (timeNow - initialTime) / 1000;
         // s = ut + 0.5at^2
@@ -325,10 +338,10 @@ export default class Game {
             let goingDown = distance > 0;
             if (bouncesLeft === 0 && goingDown && distanceToFinish <= 0) {
                 // This is now the nearest to where we stop it moving
-                window.requestAnimationFrame(finishedCb);
+                window.requestAnimationFrame(deferred.resolve);
             } else {
                 window.requestAnimationFrame(function () {
-                    self.recursiveDrop(fallingCircles, timeNow, finalVelocity, distanceToSurface, distanceToFinish, bouncesLeft, finishedCb);
+                    self.recursiveDrop(fallingCircles, timeNow, finalVelocity, distanceToSurface, distanceToFinish, bouncesLeft, deferred);
                 });
             }
 
@@ -358,17 +371,16 @@ export default class Game {
             distanceToSurface = distanceToSurface - totalDistanceTraveled;
             this.drawCircles();
             window.requestAnimationFrame(function () {
-                self.recursiveDrop(fallingCircles, timeNow, finalVelocity, distanceToSurface, distanceToFinish, bouncesLeft, finishedCb);
+                self.recursiveDrop(fallingCircles, timeNow, finalVelocity, distanceToSurface, distanceToFinish, bouncesLeft, deferred);
             });
         }
         else {
             // We should never land here:
             // todo: determine if valid reason for landing here.
-            //console.log("Distance: ", distance);
-            //console.log("DistanceToSurface: ", distanceToSurface);
-            //console.log("DistanceToFinish: ", distanceToFinish);
-            window.requestAnimationFrame(finishedCb);
+            window.requestAnimationFrame(deferred.resolve);
         }
+
+        return deferred.promise;
 
 
     }
