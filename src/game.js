@@ -108,6 +108,12 @@ export default class Game {
         return prog;
     }
 
+    /**
+     * Get location of all the variables inside the shaders.
+     * Then set the value of the uniform variables u_width and u_height - These are the same for all
+     * the primitives we are going to draw.
+     * @param shaderProg
+     */
     initGL(shaderProg) {
         this.gl.useProgram(shaderProg);
 
@@ -246,6 +252,13 @@ export default class Game {
     }
 
 
+    /**
+     * Shrink a circle and then paint. Method will continue call itself
+     * until the circle is 25% of its original size
+     * @param {Circle} circle
+     * @param deferred
+     * @returns {Promise}
+     */
     animateDisappearance(circle, deferred = {}) {
         if (!deferred.hasOwnProperty("resolve")) {
             deferred.promise = new Promise(function (resolve, reject) {
@@ -267,6 +280,16 @@ export default class Game {
         return deferred.promise;
     }
 
+    /**
+     * Update the circles object with the the new position of the circles
+     * i.e. move them all down by one place
+     * Also create new circle to to first row and place it's matrix out of view initially.
+     * @param circleRow
+     * @param circleCol
+     * @param topCircleMatrix
+     * @returns {<Circle>, <TransformMatrices>} Returns an array of circles to be animated into their new position
+     * as well as their current matrix transformations.
+     */
     updateCirclesObj(circleRow, circleCol, topCircleMatrix) {
         let self = this;
         let colKey = "col_" + circleCol;
@@ -386,6 +409,9 @@ export default class Game {
     }
 
 
+    /**
+     * Re paint the canvas with values from our circles object
+     */
     drawCircles() {
         this.gl.clearColor(1, 1, 1, 1);
         this.gl.clear(this.gl.COLOR_BUFFER_BIT);
@@ -400,6 +426,7 @@ export default class Game {
 
                 // Set u_color variable value:
                 this.gl.uniform3fv(this.uniformColor, this.circles[rowKey][colKey].getColor());
+
                 // Draw a circle
                 this.gl.bindBuffer(this.gl.ARRAY_BUFFER, this.bufferCoordsCircle);
                 this.gl.vertexAttribPointer(this.attributeCoords, 2, this.gl.FLOAT, false, 0, 0);
