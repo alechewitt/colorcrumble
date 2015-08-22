@@ -45,7 +45,15 @@ export default class Game {
         this.circleRadius = 0.0;
         this.circles = {};
 
+        // In Game Variables
         this.animating = false;
+        this.currentCircle = {
+            circle: false,
+            row   : false,
+            col   : false,
+            startX: false,
+            startY: false
+        };
     }
 
     init() {
@@ -212,10 +220,93 @@ export default class Game {
     }
 
     addEventHandlers() {
-        this.canvas.addEventListener("mousedown", this.doMouseDown.bind(this), false);
+        //this.canvas.addEventListener("touchstart", this.touchStartListener.bind(this), false);
+        this.canvas.addEventListener("mousedown", this.mouseDownListener.bind(this), false);
+
+        //this.canvas.addEventListener("mouseup", this.mouseUpListener.bind(this), false);
+        //this.canvas.addEventListener("touchend", this.touchEndListener.bind(this), false);
+
+        //this.canvas.addEventListener("mousemove", this.mouseMoveListener.bind(this), false);
+        //this.canvas.addEventListener("touchmove", this.touchMoveListener.bind(this), false);
     }
 
-    doMouseDown(event) {
+    touchStartListener(event) {
+        // Prevent devices calling click start, and any other event that a touch may trigger
+        event.preventDefault();
+
+        let x = event.touches[0].clientX * this.devicePixelRatio;
+        let y = event.touches[0].clientY * this.devicePixelRatio;
+        this.movementStart(x, y);
+    }
+
+    touchMoveListener(event) {
+        // Prevent devices calling click start, and any other event that a touch may trigger
+        event.preventDefault();
+
+        let x = event.touches[0].clientX * this.devicePixelRatio;
+        let y = event.touches[0].clientY * this.devicePixelRatio;
+        this.movementMove(x, y);
+
+    }
+
+    touchEndListener(event) {
+        // Prevent devices calling click start, and any other event that a touch may trigger
+        event.preventDefault();
+        console.log("Logging End Event: ", event);
+        let x = event.changedTouches[0].clientX * this.devicePixelRatio;
+        let y = event.changedTouches[0].clientY * this.devicePixelRatio;
+
+        this.movementFinish(x, y);
+    }
+
+    movementStart(x, y) {
+        event.preventDefault();
+        console.log("Mouse down triggered");
+
+        console.log("event: ", event);
+
+        // Get the circle we have click on
+        //let x = event.clientX * this.devicePixelRatio;
+        //let y = event.clientY * this.devicePixelRatio;
+
+        // Row number = Floor( (x - margin) / (diameter + margin));
+        let col = Math.floor((x - this.margin) / ((2 * this.circleRadius) + this.margin));
+        this.currentCircle.col = col;
+        let row = Math.floor((y - this.margin) / (( 2 * this.circleRadius) + this.margin));
+        this.currentCircle.row = Math.floor((y - this.margin) / (( 2 * this.circleRadius) + this.margin));
+        this.currentCircle.circle = this.circles["row_" + row]["col_" + col];
+        this.currentCircle.startX = x;
+        this.currentCircle.startY = y;
+        this.currentCircle.initialMat = this.currentCircle.circle.getMat3();
+    }
+
+    movementMove(x, y) {
+        event.preventDefault();
+        console.log("Mouse move event: ", event);
+        // If we have a current circle, lets move it!
+        if (this.currentCircle.circle) {
+            let xMovement = x - this.currentCircle.startX;
+            let yMovement = y - this.currentCircle.startY;
+            this.currentCircle.circle.setMat3(this.currentCircle.initialMat);
+            this.currentCircle.circle.translate(xMovement, yMovement);
+            this.drawCircles();
+            console.log("Initial x: ", this.currentCircle.startX);
+            console.log("Mouse move client x: ", x);
+            console.log("xMovement: ", xMovement);
+            console.log("--");
+        }
+
+    }
+
+    movementFinish(x, y) {
+        event.preventDefault();
+        console.log("Mouse up triggered");
+        this.currentCircle.circle = false;
+        //this.canvas.removeEventListener('mousemove', this.mouseMoveListener.bind(this), false);
+    }
+
+    // Old Mouse down listener:
+    removeCircle(event) {
         if (!this.animating) {
             this.animating = true;
             let x = event.clientX * this.devicePixelRatio;
