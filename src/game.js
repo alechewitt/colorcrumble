@@ -2,6 +2,7 @@
 
 import colors from "./color-options.js";
 import Circle from "./circle.js";
+import InputHandler from "./input-handler.js";
 
 // Shaders:
 import vertexShader from "./vertex-shader.vert";
@@ -11,7 +12,7 @@ const ACCELERATION = 9.8;
 
 // Pixels per meter
 // Increase this will increase the apparent speed the circles fall down with
-const SCALE_FACTOR = 800;
+const SCALE_FACTOR = 700;
 
 // How Much energy is preserved when the circles bounce off each other.
 const COEF_RESTITUTION = 0.5;
@@ -26,6 +27,7 @@ export default class Game {
 
         this.canvas = null;
         this.gl = null;
+        this.circleKeys = [];
 
         // Shader variables locations:
         this.attributeCoords = null;
@@ -45,6 +47,16 @@ export default class Game {
         this.circleRadius = 0.0;
         this.circles = {};
 
+        this.moveAnimationIndex = 0;
+
+        // Input Handler:
+        this.inputHandler = new InputHandler(
+            this.movementStart.bind(this),
+            this.movementMove.bind(this),
+            this.movementFinish.bind(this),
+            this.devicePixelRatio
+        );
+
         // In Game Variables
         this.animating = false;
         this.currentCircle = {
@@ -54,6 +66,13 @@ export default class Game {
             startX: false,
             startY: false
         };
+        this.swappingCircle = {
+            circle    : false,
+            initialMat: false,
+            row       : false,
+            col       : false
+        };
+        this.currentMoveAnimationFrame = false;
     }
 
     init() {
@@ -64,7 +83,6 @@ export default class Game {
         this.createCircleBufferData();
         this.createGameGridObj();
         this.drawCircles();
-        this.addEventHandlers();
     }
 
     initCanvas() {
@@ -196,9 +214,10 @@ export default class Game {
         let yTranslation = this.margin + this.circleRadius;
         let xTranslation = this.margin + this.circleRadius;
         for (let i = 0; i < this.numRows; i++) {
-            this.circles["row_" + i] = {};
+            let rowKey = "row_" + i;
+            this.circles[rowKey] = {};
             for (let k = 0; k < this.circlesPerRow; k++) {
-
+                let colKey = "col_" + k;
                 // Random color:
                 let colorInt = Math.floor(Math.random() * colors.length);
 
@@ -208,7 +227,10 @@ export default class Game {
                 circle.translate(xTranslation, yTranslation);
 
                 // Add it to our array of circles
-                this.circles["row_" + i]["col_" + k] = circle;
+                this.circles[rowKey][colKey] = circle;
+
+                // Add this key to our array of stored keys
+                this.circleKeys.push([rowKey, colKey]);
 
                 // Increment the translation for the next circle:
                 xTranslation += offset;
@@ -219,127 +241,193 @@ export default class Game {
         }
     }
 
-    addEventHandlers() {
-        //this.canvas.addEventListener("touchstart", this.touchStartListener.bind(this), false);
-        this.canvas.addEventListener("mousedown", this.mouseDownListener.bind(this), false);
-
-        //this.canvas.addEventListener("mouseup", this.mouseUpListener.bind(this), false);
-        //this.canvas.addEventListener("touchend", this.touchEndListener.bind(this), false);
-
-        //this.canvas.addEventListener("mousemove", this.mouseMoveListener.bind(this), false);
-        //this.canvas.addEventListener("touchmove", this.touchMoveListener.bind(this), false);
-    }
-
-    touchStartListener(event) {
-        // Prevent devices calling click start, and any other event that a touch may trigger
-        event.preventDefault();
-
-        let x = event.touches[0].clientX * this.devicePixelRatio;
-        let y = event.touches[0].clientY * this.devicePixelRatio;
-        this.movementStart(x, y);
-    }
-
-    touchMoveListener(event) {
-        // Prevent devices calling click start, and any other event that a touch may trigger
-        event.preventDefault();
-
-        let x = event.touches[0].clientX * this.devicePixelRatio;
-        let y = event.touches[0].clientY * this.devicePixelRatio;
-        this.movementMove(x, y);
-
-    }
-
-    touchEndListener(event) {
-        // Prevent devices calling click start, and any other event that a touch may trigger
-        event.preventDefault();
-        console.log("Logging End Event: ", event);
-        let x = event.changedTouches[0].clientX * this.devicePixelRatio;
-        let y = event.changedTouches[0].clientY * this.devicePixelRatio;
-
-        this.movementFinish(x, y);
-    }
-
     movementStart(x, y) {
-        event.preventDefault();
-        console.log("Mouse down triggered");
+        if (!this.animating) {
+            // Row number = Floor( (y - margin) / (diameter + margin));
+            let col = Math.floor((x - this.margin) / ((2 * this.circleRadius) + this.margin));
+            this.currentCircle.col = col;
+            let row = Math.floor((y - this.margin) / (( 2 * this.circleRadius) + this.margin));
+            this.currentCircle.row = Math.floor((y - this.margin) / (( 2 * this.circleRadius) + this.margin));
 
-        console.log("event: ", event);
+            // Get the the circle that has been clicked:
+            this.currentCircle.circle = this.circles["row_" + row]["col_" + col];
+            this.currentCircle.startX = x;
+            this.currentCircle.startY = y;
+            this.currentCircle.initialMat = this.currentCircle.circle.getMat3();
+            this.currentCircle.currentX = x;
+            this.currentCircle.currentY = y;
+            this.circleMoving = true;
+            this.moveAnimationIndex = window.requestAnimationFrame(this.moveCircle.bind(this));
+        }
 
-        // Get the circle we have click on
-        //let x = event.clientX * this.devicePixelRatio;
-        //let y = event.clientY * this.devicePixelRatio;
-
-        // Row number = Floor( (x - margin) / (diameter + margin));
-        let col = Math.floor((x - this.margin) / ((2 * this.circleRadius) + this.margin));
-        this.currentCircle.col = col;
-        let row = Math.floor((y - this.margin) / (( 2 * this.circleRadius) + this.margin));
-        this.currentCircle.row = Math.floor((y - this.margin) / (( 2 * this.circleRadius) + this.margin));
-        this.currentCircle.circle = this.circles["row_" + row]["col_" + col];
-        this.currentCircle.startX = x;
-        this.currentCircle.startY = y;
-        this.currentCircle.initialMat = this.currentCircle.circle.getMat3();
     }
 
     movementMove(x, y) {
-        event.preventDefault();
-        console.log("Mouse move event: ", event);
-        // If we have a current circle, lets move it!
-        if (this.currentCircle.circle) {
-            let xMovement = x - this.currentCircle.startX;
-            let yMovement = y - this.currentCircle.startY;
-            this.currentCircle.circle.setMat3(this.currentCircle.initialMat);
-            this.currentCircle.circle.translate(xMovement, yMovement);
-            this.drawCircles();
-            console.log("Initial x: ", this.currentCircle.startX);
-            console.log("Mouse move client x: ", x);
-            console.log("xMovement: ", xMovement);
-            console.log("--");
+        if (!this.animating && this.circleMoving) {
+            this.currentCircle.currentX = x;
+            this.currentCircle.currentY = y;
         }
 
     }
 
     movementFinish(x, y) {
-        event.preventDefault();
-        console.log("Mouse up triggered");
-        this.currentCircle.circle = false;
-        //this.canvas.removeEventListener('mousemove', this.mouseMoveListener.bind(this), false);
+        if (!this.animating && this.circleMoving) {
+            // Stop move method recursively calling itself;
+            this.circleMoving = false;
+            // Cancel any move animation that is currently in progress
+            window.cancelAnimationFrame(this.moveAnimationIndex);
+
+            // Maximum distance to move
+            let maxDistanceToMove = (2 * this.circleRadius) + this.margin;
+            let minDistanceToMove = maxDistanceToMove / 2;
+            // Update New position in array
+            let xDragged = x - this.currentCircle.startX;
+            let yDragged = y - this.currentCircle.startY;
+            if (Math.abs(xDragged) > minDistanceToMove || Math.abs(yDragged) > minDistanceToMove) {
+                // Counter has been moved far enough to register a swap
+                this.swappingCircle.circle.setMat3(this.currentCircle.initialMat);
+                this.currentCircle.circle.setMat3(this.swappingCircle.initialMat);
+                // Swap them in the circles object
+                this.circles["row_" + this.currentCircle.row]["col_" + this.currentCircle.col] = this.swappingCircle.circle;
+                this.circles["row_" + this.swappingCircle.row]["col_" + this.swappingCircle.col] = this.currentCircle.circle;
+                this.drawCircles();
+                this.removeCircle(this.currentCircle.circle, this.swappingCircle.row, this.swappingCircle.col);
+            }
+            else {
+                // Put them back in their original places
+                this.swappingCircle.circle.setMat3(this.swappingCircle.initialMat);
+                this.currentCircle.circle.setMat3(this.currentCircle.initialMat);
+                this.drawCircles();
+            }
+            console.log("Current Circle: ", this.currentCircle);
+            console.log("Swapping circle: ", this.swappingCircle);
+            // Reset current and swapping circles
+            this.currentCircle = {
+                circle: false,
+                row   : false,
+                col   : false,
+                startX: false,
+                startY: false
+            };
+            this.swappingCircle = {
+                circle    : false,
+                initialMat: false,
+                row       : false,
+                col       : false
+            };
+        }
+
+    }
+
+    moveCircle() {
+        if (this.circleMoving) {
+            this.moveAnimationIndex = window.requestAnimationFrame(this.moveCircle.bind(this));
+        }
+
+        let maxDistanceToMove = (2 * this.circleRadius) + this.margin;
+
+        let xMovement = this.currentCircle.currentX - this.currentCircle.startX;
+        let yMovement = this.currentCircle.currentY - this.currentCircle.startY;
+        let swappingCircleCol;
+        let swappingCircleRow;
+        let xMovementSwappingCircle;
+        let yMovementSwappingCircle;
+        // Determine if this is a Vertical or Horizontal movement
+        if (Math.abs(xMovement) >= Math.abs(yMovement)) {
+            yMovement = 0;
+            yMovementSwappingCircle = 0;
+            xMovementSwappingCircle = xMovement * -1;
+            swappingCircleRow = this.currentCircle.row;
+            // Horizontal Movement;
+            if (xMovement > 0) {
+                //Movement to the right
+                swappingCircleCol = this.currentCircle.col + 1;
+                if (Math.abs(xMovement) > maxDistanceToMove) {
+                    xMovementSwappingCircle = -1 * maxDistanceToMove;
+                    xMovement = maxDistanceToMove;
+                }
+            }
+            else {
+                swappingCircleCol = this.currentCircle.col - 1;
+                if (Math.abs(xMovement) > maxDistanceToMove) {
+                    xMovementSwappingCircle = maxDistanceToMove;
+                    xMovement = -1 * maxDistanceToMove;
+                }
+            }
+        } else {
+            // Vertical Movement
+            xMovement = 0;
+            xMovementSwappingCircle = 0;
+            yMovementSwappingCircle = yMovement * -1;
+            swappingCircleCol = this.currentCircle.col;
+            if (yMovement > 0) {
+                // We are moving the circle down
+                swappingCircleRow = this.currentCircle.row + 1;
+                if (Math.abs(yMovement) > maxDistanceToMove) {
+                    yMovementSwappingCircle = -1 * maxDistanceToMove;
+                    yMovement = maxDistanceToMove;
+                }
+            }
+            else {
+                swappingCircleRow = this.currentCircle.row - 1;
+                if (Math.abs(yMovement) > maxDistanceToMove) {
+                    yMovementSwappingCircle = maxDistanceToMove;
+                    yMovement = -1 * maxDistanceToMove;
+                }
+            }
+        }
+        // Update the moving circle
+        this.currentCircle.circle.setMat3(this.currentCircle.initialMat);
+        this.currentCircle.circle.translate(xMovement, yMovement);
+
+        let swappingCircle = this.circles["row_" + swappingCircleRow]["col_" + swappingCircleCol];
+        if (swappingCircle === this.swappingCircle.circle) {
+            // Already moved a bit.Reset the Matrix
+            swappingCircle.setMat3(this.swappingCircle.initialMat);
+        } else {
+            if (this.swappingCircle.circle) {
+                // There is already one here that we need to place back into it's original place
+                this.swappingCircle.circle.setMat3(this.swappingCircle.initialMat);
+            }
+            // First time
+            this.swappingCircle.circle = swappingCircle;
+            this.swappingCircle.initialMat = swappingCircle.getMat3();
+            this.swappingCircle.row = swappingCircleRow;
+            this.swappingCircle.col = swappingCircleCol;
+        }
+
+        swappingCircle.translate(xMovementSwappingCircle, yMovementSwappingCircle);
+        this.drawCircles();
+
     }
 
     // Old Mouse down listener:
-    removeCircle(event) {
-        if (!this.animating) {
-            this.animating = true;
-            let x = event.clientX * this.devicePixelRatio;
-            let y = event.clientY * this.devicePixelRatio;
+    removeCircle(circle, row, col) {
+        this.animating = true;
+        let self = this;
+        let topCircleMatrix = this.circles["row_0"]["col_" + col].getMat3();
+        let fallingCircles;
+        let savedMats;
+        let distanceToFall = (2 * self.circleRadius) + self.margin;
+        this.animateDisappearance(circle).
+            then(function () {
+                [fallingCircles, savedMats] = self.updateCirclesObj(row, col, topCircleMatrix);
 
-            // Row number = Floor( (x - margin) / (diameter + margin));
-            let col = Math.floor((x - this.margin) / ((2 * this.circleRadius) + this.margin));
-            let row = Math.floor((y - this.margin) / (( 2 * this.circleRadius) + this.margin));
-            let circle = this.circles["row_" + row]["col_" + col];
-            let self = this;
-            let topCircleMatrix = this.circles["row_0"]["col_" + col].getMat3();
-            let fallingCircles;
-            let savedMats;
-            let distanceToFall = (2 * self.circleRadius) + self.margin;
-            this.animateDisappearance(circle).
-                then(function () {
-                    [fallingCircles, savedMats] = self.updateCirclesObj(row, col, topCircleMatrix);
-
-                    let distanceToNextBallSurface = (distanceToFall + self.margin) / SCALE_FACTOR;
-                    let distanceToRest = distanceToFall / SCALE_FACTOR;
-                    let firstTime = new Date().getTime();
-                    return self.recursiveDrop(fallingCircles, firstTime, 0, distanceToNextBallSurface, distanceToRest, 1);
-                })
-                .then(function () {
-                    // Finished animating to as near as possible
-                    for (let i = 0; i < savedMats.length; i++) {
-                        fallingCircles[i].setMat3(savedMats[i]);
-                        fallingCircles[i].translate(0, distanceToFall);
-                    }
-                    self.drawCircles();
-                    self.animating = false;
-                });
-        }
+                let distanceToNextBallSurface = (distanceToFall + self.margin) / SCALE_FACTOR;
+                let distanceToRest = distanceToFall / SCALE_FACTOR;
+                let firstTime = new Date().getTime();
+                return self.recursiveDrop(fallingCircles, firstTime, 0, distanceToNextBallSurface, distanceToRest, 1);
+            })
+            .then(function () {
+                // Finished animating to as near as possible
+                for (let i = 0; i < savedMats.length; i++) {
+                    fallingCircles[i].setMat3(savedMats[i]);
+                    fallingCircles[i].translate(0, distanceToFall);
+                }
+                self.drawCircles();
+                self.animating = false;
+            });
+        //}
     }
 
 
@@ -507,22 +595,21 @@ export default class Game {
         this.gl.clearColor(1, 1, 1, 1);
         this.gl.clear(this.gl.COLOR_BUFFER_BIT);
 
+        let circleKeysLen = this.circleKeys.length;
+        for (let i = 0; i < circleKeysLen; i++) {
+            let rowKey = this.circleKeys[i][0];
+            let colKey = this.circleKeys[i][1];
 
-        for (let i = 0; i < this.numRows; i++) {
-            for (let k = 0; k < this.circlesPerRow; k++) {
-                let rowKey = "row_" + i;
-                let colKey = "col_" + k;
-                // Set the u_transform variable
-                this.gl.uniformMatrix3fv(this.uniformTransform, false, this.circles[rowKey][colKey].getMat3());
+            // Set the u_transform variable
+            this.gl.uniformMatrix3fv(this.uniformTransform, false, this.circles[rowKey][colKey].getMat3());
 
-                // Set u_color variable value:
-                this.gl.uniform3fv(this.uniformColor, this.circles[rowKey][colKey].getColor());
+            // Set u_color variable value:
+            this.gl.uniform3fv(this.uniformColor, this.circles[rowKey][colKey].getColor());
 
-                // Draw a circle
-                this.gl.bindBuffer(this.gl.ARRAY_BUFFER, this.bufferCoordsCircle);
-                this.gl.vertexAttribPointer(this.attributeCoords, 2, this.gl.FLOAT, false, 0, 0);
-                this.gl.drawArrays(this.gl.TRIANGLE_FAN, 0, this.numVerticesPerCircle);
-            }
+            // Draw a circle
+            this.gl.bindBuffer(this.gl.ARRAY_BUFFER, this.bufferCoordsCircle);
+            this.gl.vertexAttribPointer(this.attributeCoords, 2, this.gl.FLOAT, false, 0, 0);
+            this.gl.drawArrays(this.gl.TRIANGLE_FAN, 0, this.numVerticesPerCircle);
         }
     }
 }
