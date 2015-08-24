@@ -24,6 +24,8 @@ export default class Circle {
 
         this.color = color;
         this.name = "";
+        this.rowIndex = 0;
+        this.colIndex = 0;
     }
 
     getMat3() {

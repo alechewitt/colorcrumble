@@ -225,6 +225,8 @@ export default class Game {
                 let circle = new Circle(colors[colorInt].color);
                 circle.name = colors[colorInt].name + "___rowinitial_" + i + "___colinitial_" + k;
                 circle.translate(xTranslation, yTranslation);
+                circle.rowIndex = i;
+                circle.colIndex = k;
 
                 // Add it to our array of circles
                 this.circles[rowKey][colKey] = circle;
@@ -291,7 +293,8 @@ export default class Game {
                 this.circles["row_" + this.currentCircle.row]["col_" + this.currentCircle.col] = this.swappingCircle.circle;
                 this.circles["row_" + this.swappingCircle.row]["col_" + this.swappingCircle.col] = this.currentCircle.circle;
                 this.drawCircles();
-                this.removeCircle(this.currentCircle.circle, this.swappingCircle.row, this.swappingCircle.col);
+                //this.removeCircle(this.currentCircle.circle, this.swappingCircle.row, this.swappingCircle.col);
+                this.removeCircles([this.swappingCircle.circle, this.currentCircle.circle]);
             }
             else {
                 // Put them back in their original places
@@ -299,8 +302,6 @@ export default class Game {
                 this.currentCircle.circle.setMat3(this.currentCircle.initialMat);
                 this.drawCircles();
             }
-            console.log("Current Circle: ", this.currentCircle);
-            console.log("Swapping circle: ", this.swappingCircle);
             // Reset current and swapping circles
             this.currentCircle = {
                 circle: false,
@@ -401,17 +402,16 @@ export default class Game {
 
     }
 
-    // Old Mouse down listener:
-    removeCircle(circle, row, col) {
+    removeCircles(circles) {
         this.animating = true;
         let self = this;
-        let topCircleMatrix = this.circles["row_0"]["col_" + col].getMat3();
+        //let topCircleMatrix = this.circles["row_0"]["col_" + col].getMat3();
         let fallingCircles;
         let savedMats;
         let distanceToFall = (2 * self.circleRadius) + self.margin;
-        this.animateDisappearance(circle).
+        this.animateDisappearance(circles).
             then(function () {
-                [fallingCircles, savedMats] = self.updateCirclesObj(row, col, topCircleMatrix);
+                [fallingCircles, savedMats] = self.updateCircleObjNew(circles);
 
                 let distanceToNextBallSurface = (distanceToFall + self.margin) / SCALE_FACTOR;
                 let distanceToRest = distanceToFall / SCALE_FACTOR;
@@ -426,6 +426,8 @@ export default class Game {
                 }
                 self.drawCircles();
                 self.animating = false;
+                console.log("Logging final circle positions");
+                console.log(self.circles);
             });
         //}
     }
@@ -434,11 +436,11 @@ export default class Game {
     /**
      * Shrink a circle and then paint. Method will continue call itself
      * until the circle is 25% of its original size
-     * @param {Circle} circle
+     * @param {<Circle>} circles
      * @param deferred
      * @returns {Promise}
      */
-    animateDisappearance(circle, deferred = {}) {
+    animateDisappearance(circles, deferred = {}) {
         if (!deferred.hasOwnProperty("resolve")) {
             deferred.promise = new Promise(function (resolve, reject) {
                 deferred.resolve = resolve;
@@ -446,17 +448,98 @@ export default class Game {
             });
         }
         let self = this;
-        if (circle.getScaleFactor() <= 0.25) {
+        if (circles[0].getScaleFactor() <= 0.25) {
             deferred.resolve();
         }
         else {
-            circle.scale(0.8);
+            for (let circle of circles) {
+                circle.scale(0.8);
+            }
             this.drawCircles();
             window.requestAnimationFrame(function () {
-                self.animateDisappearance(circle, deferred);
+                self.animateDisappearance(circles, deferred);
             });
         }
         return deferred.promise;
+    }
+
+    updateCircleObjNew(circlesArray) {
+        console.log("Updating circles object");
+        /**
+         * Map of objects containing
+         * key: colIndex
+         * value:
+         * {
+         *     numberCircles:    int
+         *     topCircleRow:  int (The highes circle in this column that is being erased, this will be the lowest number)
+         * }
+         *
+         */
+        let colsAnimating = new Map();
+        for (let circle of circlesArray) {
+            if (colsAnimating.has(circle.colIndex)){
+                // We already have a circle in this column
+                let colInfo = colsAnimating.get(circle.colIndex);
+                colInfo.numberCircles += 1;
+                if (colInfo.topCircleRow > circle.rowIndex) {
+                    colInfo.topCircleRow = circle.rowIndex;
+                }
+            }
+            else {
+                // No circle in this column yet lets create one
+                let newColInfo = {
+                    numberCircles:   1,
+                    topCircleRow: circle.rowIndex
+                };
+                colsAnimating.set(circle.colIndex, newColInfo);
+            }
+        }
+        let fallingCircles = [];
+        let initialMats = [];
+        let distanceToFall = (2 * this.circleRadius) + this.margin;
+        // Now have Map of the columns
+        for (let [colInt, colObj] of colsAnimating) {
+            let colKey = "col_" + colInt;
+            let lowestFallingCircleInt = colObj.topCircleRow - 1;
+            // Update the circle object
+            for (let row = lowestFallingCircleInt; row >= 0; row--) {
+                let rowBelowIndex = row + colObj.numberCircles;
+                let rowBelowKey = "row_" + rowBelowIndex;
+                this.circles[rowBelowKey][colKey] = this.circles["row_" + row][colKey];
+                this.circles[rowBelowKey][colKey].rowIndex = rowBelowIndex;
+                fallingCircles.push(this.circles[rowBelowKey][colKey]);
+                initialMats.push(this.circles[rowBelowKey][colKey].getMat3());
+            }
+
+            // Create the new circles for this row
+            let amountToTranslate = -1 * distanceToFall;
+            let topCircleMat = this.circles["row_" + colObj.numberCircles][colKey].getMat3();
+            console.log("Creating new circles-- ");
+            for (let rowIndex = colObj.numberCircles -1; rowIndex >= 0; rowIndex--) {
+                console.log("Row index: ", rowIndex);
+                // Get a new random color
+                let colorInt = Math.floor(Math.random() * colors.length);
+                let newColor = colors[colorInt].color;
+
+                // Create a new circle to be added to the object at the top
+                let newCircle = new Circle(newColor);
+                newCircle.setMat3(topCircleMat);
+                newCircle.translate(0, amountToTranslate);
+                newCircle.colIndex = colInt;
+                newCircle.rowIndex = rowIndex;
+                this.circles["row_" + rowIndex][colKey] = newCircle;
+                console.log("-- NEW CIRCLE --");
+                console.log(newCircle);
+                // Add to the circles to be animated downwards
+                fallingCircles.push(newCircle);
+                initialMats.push(newCircle.getMat3());
+
+                // Increase the amount to translate
+                amountToTranslate -= distanceToFall;
+            }
+        }
+        console.log("Before return Falling Circles: ", fallingCircles);
+        return [fallingCircles, initialMats];
     }
 
     /**
@@ -516,6 +599,8 @@ export default class Game {
      * @param deferred
      */
     recursiveDrop(fallingCircles, initialTime, initialVelocity, distanceToSurface, distanceToFinish, bouncesLeft, deferred = {}) {
+        console.log("A recursive drop");
+        console.log("Falling Circles: ", fallingCircles);
         let self = this;
         // Create a promise if we don't already have one
         if (!deferred.hasOwnProperty("resolve")) {
