@@ -12,7 +12,7 @@ const ACCELERATION = 9.8;
 
 // Pixels per meter
 // Increase this will increase the apparent speed the circles fall down with
-const SCALE_FACTOR = 1;
+const SCALE_FACTOR = 500;
 
 // How Much energy is preserved when the circles bounce off each other.
 const COEF_RESTITUTION = 0.5;
@@ -292,8 +292,16 @@ export default class Game {
                 // Swap them in the circles object
                 this.circles["row_" + this.currentCircle.row]["col_" + this.currentCircle.col] = this.swappingCircle.circle;
                 this.circles["row_" + this.swappingCircle.row]["col_" + this.swappingCircle.col] = this.currentCircle.circle;
+                let randomCircle;
+                if (this.swappingCircle.row == this.currentCircle.row) {
+                    randomCircle = this.circles["row_" + (this.swappingCircle.row + 1)]["col_" + this.swappingCircle.col];
+                } else {
+                    // columns are the same
+                    randomCircle = this.circles["row_" + this.swappingCircle.row]["col_" + (this.swappingCircle.col + 1)];
+                }
                 this.drawCircles();
                 //this.removeCircle(this.currentCircle.circle, this.swappingCircle.row, this.swappingCircle.col);
+                //this.removeCircles([this.swappingCircle.circle, this.currentCircle.circle, randomCircle]);
                 this.removeCircles([this.swappingCircle.circle, this.currentCircle.circle]);
             }
             else {
@@ -411,12 +419,8 @@ export default class Game {
         this.animateDisappearance(circles).
             then(function () {
                 fallingCircles = self.updateCircleObjs(circles);
-
-                let distanceToNextBallSurface = (distanceToFall + self.margin) / SCALE_FACTOR;
-                let distanceToRest = distanceToFall / SCALE_FACTOR;
-                let firstTime = new Date().getTime();
                 //return self.recursiveDrop(fallingCircles, firstTime, 0, distanceToNextBallSurface, distanceToRest, 1);
-                return self.recursiveDrop(fallingCircles, firstTime);
+                return self.recursiveDrop(fallingCircles);
             })
             .then(function () {
                 // Finished animating to as near as possible
@@ -503,18 +507,20 @@ export default class Game {
         // Now have Map of the columns
         for (let [colInt, colObj] of colsAnimating) {
             let overallDistanceToFall = oneCircleFall * colObj.numberCircles;
+            //let overallDistanceToFall = oneCircleFall;
             console.log("Logging overall distance to Fall: ", overallDistanceToFall);
             console.log("distanceToFinish: ", (overallDistanceToFall / SCALE_FACTOR));
             console.log("distanceToSurface: ", ((overallDistanceToFall + this.margin) / SCALE_FACTOR));
             let column = {
                 circles              : [],
                 initialMats          : [],
-                distanceToFinish     : overallDistanceToFall / SCALE_FACTOR,
                 distanceToSurface    : (overallDistanceToFall + this.margin) / SCALE_FACTOR,
+                distanceToFinish     : overallDistanceToFall / SCALE_FACTOR,
                 overallDistanceToFall: overallDistanceToFall,
                 bouncesLeft          : 1,
                 initialVelocity      : 0,
-                animationFinished    : false
+                animationFinished    : false,
+                initialTime          : new Date().getTime()
             };
             let colKey = "col_" + colInt;
             let lowestFallingCircleInt = colObj.topCircleRow - 1;
@@ -574,7 +580,7 @@ export default class Game {
     //distanceRest
     //    distanceToNextBallSurface:
     //    overallDistanceToFall
-    recursiveDrop(fallingColumns, initialTime, deferred = {}) {
+    recursiveDrop(fallingColumns, deferred = {}) {
         // Create a promise if we don't already have one
         console.log("Logging deferred: ", deferred);
         if (!deferred.hasOwnProperty("resolve")) {
@@ -583,8 +589,6 @@ export default class Game {
                 deferred.reject = reject;
             });
         }
-        let timeNow = new Date().getTime();
-        let deltaT = (timeNow - initialTime) / 1000;
 
         let allColumnsFinishedAnimating = true;
         console.log("Logging all fallingColumns: ", fallingColumns);
@@ -592,6 +596,10 @@ export default class Game {
             if (column.animationFinished) {
                 continue;
             }
+            let timeNow = new Date().getTime();
+            let deltaT = (timeNow - column.initialTime) / 1000;
+            column.initialTime = timeNow;
+            console.log("Distance calculated initialVelocity: ", column.initialVelocity);
             // s = ut + 0.5at^2
             let distance = (column.initialVelocity * deltaT) + (0.5 * ACCELERATION * Math.pow(deltaT, 2));
             let finalVelocity;
@@ -600,18 +608,16 @@ export default class Game {
             if (distance <= column.distanceToSurface) {
                 column.distanceToSurface -= distance;
                 column.distanceToFinish -= distance;
-                finalVelocity = column.initialVelocity + (ACCELERATION * deltaT);
                 let goingDown = distance > 0;
                 if (column.bouncesLeft === 0 && goingDown && column.distanceToFinish <= 0) {
                     // This is now the nearest to where we stop it moving
-                    // Set in there final positions according to the initial mats
-                    for (let i = 0; i < column.circles.length; i++) {
+                    console.log("-STOPPING-");
+                    for (let i = 0; i <column.circles.length; i++) {
                         column.circles[i].setMat3(column.initialMats[i]);
                         column.circles[i].translate(0, column.overallDistanceToFall);
                     }
-                    column.animationFinished = true;
-                }
-                else {
+                } else {
+                    finalVelocity = column.initialVelocity + (ACCELERATION * deltaT);
                     for (let circle of column.circles) {
                         circle.translate(0, distance * SCALE_FACTOR);
                     }
@@ -620,6 +626,7 @@ export default class Game {
                 }
 
             } else if (column.bouncesLeft > 0) {
+                console.log("We are bouncing!");
                 // This is a bounce
                 column.bouncesLeft -= 1;
                 // v^2 = u^2 + 2as
@@ -643,6 +650,8 @@ export default class Game {
                 let totalDistanceTraveled = distanceAboveBounce + column.distanceToSurface;
                 column.distanceToFinish = column.distanceToFinish - totalDistanceTraveled;
                 column.distanceToSurface = column.distanceToSurface - totalDistanceTraveled;
+                column.initialVelocity = finalVelocity;
+                console.log("Logging new initial velocity: ", column.initialVelocity);
                 allColumnsFinishedAnimating = false;
             }
             else {
@@ -663,7 +672,7 @@ export default class Game {
             let self = this;
             console.log("Recursively calling Drop!");
             window.requestAnimationFrame(function(){
-                self.recursiveDrop(fallingColumns, initialTime, deferred);
+                self.recursiveDrop(fallingColumns, deferred);
             });
         }
         return deferred.promise;
