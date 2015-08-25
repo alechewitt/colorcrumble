@@ -411,7 +411,7 @@ export default class Game {
         let distanceToFall = (2 * self.circleRadius) + self.margin;
         this.animateDisappearance(circles).
             then(function () {
-                [fallingCircles, savedMats] = self.updateCircleObjNew(circles);
+                [fallingCircles, savedMats] = self.updateCircleObjs(circles);
 
                 let distanceToNextBallSurface = (distanceToFall + self.margin) / SCALE_FACTOR;
                 let distanceToRest = distanceToFall / SCALE_FACTOR;
@@ -463,7 +463,7 @@ export default class Game {
         return deferred.promise;
     }
 
-    updateCircleObjNew(circlesArray) {
+    updateCircleObjs(circlesArray) {
         console.log("Updating circles object");
         /**
          * Map of objects containing
@@ -540,52 +540,6 @@ export default class Game {
         }
         console.log("Before return Falling Circles: ", fallingCircles);
         return [fallingCircles, initialMats];
-    }
-
-    /**
-     * Update the circles object with the the new position of the circles
-     * i.e. move them all down by one place
-     * Also create new circle to to first row and place it's matrix out of view initially.
-     * @param circleRow
-     * @param circleCol
-     * @param topCircleMatrix
-     * @returns {<Circle>, <TransformMatrices>} Returns an array of circles to be animated into their new position
-     * as well as their current matrix transformations.
-     */
-    updateCirclesObj(circleRow, circleCol, topCircleMatrix) {
-        let self = this;
-        let colKey = "col_" + circleCol;
-        let distanceToFall = (2 * this.circleRadius) + this.margin;
-        let fallingCircles = [];
-        let savedMats = [];
-        // Update circles grid object with the circles positions to be.
-        for (let row = circleRow; row >= 1; row--) {
-            let rowUp = row - 1;
-            self.circles["row_" + row][colKey] = self.circles["row_" + rowUp][colKey];
-            fallingCircles.push(self.circles["row_" + row][colKey]);
-            savedMats.push(self.circles["row_" + row][colKey].getMat3());
-        }
-
-        // == Create the new circles ==
-        // random color for new circle not same as color underneath
-        let newColor;
-        while (true) {
-            let colorInt = Math.floor(Math.random() * colors.length);
-            newColor = colors[colorInt].color;
-            if (newColor !== self.circles["row_1"][colKey].getColor()) {
-                break;
-            }
-        }
-        // Create a new circle to be added to the object at the top
-        let newCircle = new Circle(newColor);
-        newCircle.setMat3(topCircleMatrix);
-        newCircle.translate(0, -1 * distanceToFall);
-        this.circles["row_0"][colKey] = newCircle;
-        // Add to the circles to be animated downwards
-        fallingCircles.push(newCircle);
-        savedMats.push(newCircle.getMat3());
-
-        return [fallingCircles, savedMats];
     }
 
     /**
