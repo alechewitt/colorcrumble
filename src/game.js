@@ -37,7 +37,7 @@ export default class Game {
         this.uniformTransform = null;
 
         // Implementation Variables
-        this.numVerticesPerCircle = 32;
+        this.numVerticesPerCircle = 64;
         this.bufferCoordsCircle = null;
 
         // Game Variables
@@ -104,6 +104,19 @@ export default class Game {
 
         this.gl = this.canvas.getContext("webgl", options) ||
             this.canvas.getContext("experimental-webgl", options);
+        let contextAttribs = this.gl.getContextAttributes();
+        if (!contextAttribs.antialias) {
+            // If no antialiasing, lets double the devicePixelRatio
+            // This will make everything double the size but shrunk down
+            console.log("No antialiasing");
+            this.devicePixelRatio *= 2;
+            console.log("Device pixel ratio: ", this.devicePixelRatio);
+
+        }
+        else {
+            console.log("We have antialising");
+            console.log("Device pixel ratio: ", this.devicePixelRatio);
+        }
     }
 
     createShaderProgram(vertexShaderSource, fragmentShaderSource) {
@@ -423,15 +436,6 @@ export default class Game {
                 return self.recursiveDrop(fallingCircles);
             })
             .then(function () {
-                // Finished animating to as near as possible
-                //for (let i = 0; i < savedMats.length; i++) {
-                //    fallingCircles[i].setMat3(savedMats[i]);
-                //    fallingCircles[i].translate(0, distanceToFall);
-                //}
-                //self.drawCircles();
-                //self.animating = false;
-                //console.log("Logging final circle positions");
-                //console.log(self.circles);
                 console.log("All Columns are in their correct position");
                 self.animating = false;
             });
@@ -508,7 +512,9 @@ export default class Game {
         for (let [colInt, colObj] of colsAnimating) {
             let overallDistanceToFall = oneCircleFall * colObj.numberCircles;
             //let overallDistanceToFall = oneCircleFall;
-            console.log("Logging overall distance to Fall: ", overallDistanceToFall);
+            console.log("[t] Logging overall distance to Fall: ", overallDistanceToFall);
+            console.log("[t] margin: ", this.margin);
+            console.log("[t] radius: ", this.circleRadius);
             console.log("distanceToFinish: ", (overallDistanceToFall / SCALE_FACTOR));
             console.log("distanceToSurface: ", ((overallDistanceToFall + this.margin) / SCALE_FACTOR));
             let column = {
@@ -522,6 +528,7 @@ export default class Game {
                 animationFinished    : false,
                 initialTime          : new Date().getTime()
             };
+
             let colKey = "col_" + colInt;
             let lowestFallingCircleInt = colObj.topCircleRow - 1;
             // Update the circle object
@@ -535,9 +542,16 @@ export default class Game {
             }
 
             // Create the new circles for this row
-            let amountToTranslate = -1 * oneCircleFall;
-            let topCircleMat = this.circles["row_" + colObj.numberCircles][colKey].getMat3();
             console.log("Creating new circles-- ");
+            let amountToTranslate = -1 * oneCircleFall;
+            let topCircleMat;
+            if (colObj.topCircleRow === 0){
+                topCircleMat = this.circles["row_0"][colKey].getMat3WithoutScaling();
+            }
+            else {
+                topCircleMat = this.circles["row_" + colObj.numberCircles][colKey].getMat3WithoutScaling();
+            }
+
             for (let rowIndex = colObj.numberCircles -1; rowIndex >= 0; rowIndex--) {
                 console.log("Row index: ", rowIndex);
                 // Get a new random color
@@ -568,18 +582,9 @@ export default class Game {
 
     /**
      * Method will continually call
-     * @param fallingCircles
-     * @param initialTime
-     * @param initialVelocity
-     * @param distanceToSurface
-     * @param distanceToFinish
-     * @param bouncesLeft
+     * @param fallingColumns
      * @param deferred
      */
-    //recursiveDrop(fallingCircles, initialTime, initialVelocity, distanceToSurface, distanceToFinish, bouncesLeft, deferred = {}) {
-    //distanceRest
-    //    distanceToNextBallSurface:
-    //    overallDistanceToFall
     recursiveDrop(fallingColumns, deferred = {}) {
         // Create a promise if we don't already have one
         console.log("Logging deferred: ", deferred);
@@ -658,7 +663,11 @@ export default class Game {
                 // We should never land here:
                 // todo: determine if valid reason for landing here.
                 console.log("Landed in a bad place!!");
-                //allColumnsFinishedAnimating = false;
+                console.log("-STOPPING IN A BAD PLACE-");
+                for (let i = 0; i <column.circles.length; i++) {
+                    column.circles[i].setMat3(column.initialMats[i]);
+                    column.circles[i].translate(0, column.overallDistanceToFall);
+                }
             }
         }
         this.drawCircles();

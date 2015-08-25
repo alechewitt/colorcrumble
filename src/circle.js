@@ -36,6 +36,14 @@ export default class Circle {
         ];
     }
 
+    getMat3WithoutScaling() {
+        return [
+            1, 0, 0,
+            0, 1, 0,
+            this.transMatrix.e, this.transMatrix.f, 0
+        ];
+    }
+
     // An array in the same format that getMat3 returns
     setMat3(matrix) {
         this.transMatrix.a = matrix[0];
