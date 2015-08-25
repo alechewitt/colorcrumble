@@ -1,5 +1,5 @@
 application: colorcrumble
-version: webgl
+version: webgl-swipe
 runtime: go
 api_version: go1
 
