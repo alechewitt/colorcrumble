@@ -22,6 +22,8 @@ export default class InputHandler {
 
         document.addEventListener("mouseup", this.mouseUpListener.bind(this), false);
         document.addEventListener("touchend", this.touchEndListener.bind(this), false);
+        document.addEventListener("touchleave", this.touchEndListener.bind(this), false);
+        document.addEventListener("touchcancel", this.touchEndListener.bind(this), false);
     }
 
     setDevicePixelRatio(devicePixelRatio) {
