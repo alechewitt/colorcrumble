@@ -401,28 +401,33 @@ export default class Game {
                 }
             }
         }
-        // Update the moving circle
-        this.currentCircle.circle.setMat3(this.currentCircle.initialMat);
-        this.currentCircle.circle.translate(xMovement, yMovement);
+        let swappingCircleRowKey = "row_" + swappingCircleRow;
+        let swappingCircleColKey = "col_" + swappingCircleCol;
+        if (this.circles.hasOwnProperty(swappingCircleRowKey) && this.circles[swappingCircleRowKey].hasOwnProperty(swappingCircleColKey)) {
+            // There is a circle to swap with!
+            // Update the moving circle
+            this.currentCircle.circle.setMat3(this.currentCircle.initialMat);
+            this.currentCircle.circle.translate(xMovement, yMovement);
 
-        let swappingCircle = this.circles["row_" + swappingCircleRow]["col_" + swappingCircleCol];
-        if (swappingCircle === this.swappingCircle.circle) {
-            // Already moved a bit.Reset the Matrix
-            swappingCircle.setMat3(this.swappingCircle.initialMat);
-        } else {
-            if (this.swappingCircle.circle) {
-                // There is already one here that we need to place back into it's original place
-                this.swappingCircle.circle.setMat3(this.swappingCircle.initialMat);
+            let swappingCircle = this.circles["row_" + swappingCircleRow]["col_" + swappingCircleCol];
+            if (swappingCircle === this.swappingCircle.circle) {
+                // Already moved a bit.Reset the Matrix
+                swappingCircle.setMat3(this.swappingCircle.initialMat);
+            } else {
+                if (this.swappingCircle.circle) {
+                    // There is already one here that we need to place back into it's original place
+                    this.swappingCircle.circle.setMat3(this.swappingCircle.initialMat);
+                }
+                // First time
+                this.swappingCircle.circle = swappingCircle;
+                this.swappingCircle.initialMat = swappingCircle.getMat3();
+                this.swappingCircle.row = swappingCircleRow;
+                this.swappingCircle.col = swappingCircleCol;
             }
-            // First time
-            this.swappingCircle.circle = swappingCircle;
-            this.swappingCircle.initialMat = swappingCircle.getMat3();
-            this.swappingCircle.row = swappingCircleRow;
-            this.swappingCircle.col = swappingCircleCol;
-        }
 
-        swappingCircle.translate(xMovementSwappingCircle, yMovementSwappingCircle);
-        this.drawCircles();
+            swappingCircle.translate(xMovementSwappingCircle, yMovementSwappingCircle);
+            this.drawCircles();
+        }
 
     }
 
