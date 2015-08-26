@@ -24,6 +24,10 @@ export default class InputHandler {
         document.addEventListener("touchend", this.touchEndListener.bind(this), false);
     }
 
+    setDevicePixelRatio(devicePixelRatio) {
+        this.devicePixelRatio = devicePixelRatio;
+    }
+
     touchStartListener(event) {
         // Prevent devices calling click start, and any other event that a touch may trigger
         event.preventDefault();

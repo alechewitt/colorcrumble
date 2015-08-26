@@ -86,37 +86,40 @@ export default class Game {
     }
 
     initCanvas() {
-        this.canvas = document.getElementById(this.canvasId);
-
-        // set the display size of the canvas.
-        this.canvas.style.width = this.desiredWidthInCSSPixels + "px";
-        this.canvas.style.height = this.desiredHeightInCSSPixels + "px";
-
-        // set the size of the drawingBuffer
-        this.canvas.width = this.desiredWidthInCSSPixels * this.devicePixelRatio;
-        this.canvas.height = this.desiredHeightInCSSPixels * this.devicePixelRatio;
-
         let options = {
             alpha    : false,
             depth    : false,
             antialias: true
         };
 
-        this.gl = this.canvas.getContext("webgl", options) ||
-            this.canvas.getContext("experimental-webgl", options);
-        let contextAttribs = this.gl.getContextAttributes();
+        // == test for antialias support
+        let testCanvas = document.createElement("canvas");
+        let testGl = testCanvas.getContext("webgl", options) ||
+            testCanvas.getContext("experimental-webgl", options);
+
+        let contextAttribs = testGl.getContextAttributes();
         if (!contextAttribs.antialias) {
             // If no antialiasing, lets double the devicePixelRatio
-            // This will make everything double the size but shrunk down
-            console.log("No antialiasing");
             this.devicePixelRatio *= 2;
-            console.log("Device pixel ratio: ", this.devicePixelRatio);
+            this.inputHandler.setDevicePixelRatio(this.devicePixelRatio);
+        }
+        testCanvas = null;
 
-        }
-        else {
-            console.log("We have antialising");
-            console.log("Device pixel ratio: ", this.devicePixelRatio);
-        }
+
+        // Real canvas
+        this.canvas = document.getElementById(this.canvasId);
+
+        // set the display size of the canvas.
+        this.canvas.style.width = this.desiredWidthInCSSPixels + "px";
+        this.canvas.style.height = this.desiredHeightInCSSPixels + "px";
+
+        this.canvas.width = this.desiredWidthInCSSPixels * this.devicePixelRatio;
+        this.canvas.height = this.desiredHeightInCSSPixels * this.devicePixelRatio;
+
+        this.gl = this.canvas.getContext("webgl", options) ||
+            this.canvas.getContext("experimental-webgl", options);
+
+
     }
 
     createShaderProgram(vertexShaderSource, fragmentShaderSource) {
