@@ -2,7 +2,7 @@
 
 export default class Circle {
 
-    constructor(color) {
+    constructor(color, group) {
         /**
          * Represents a 2d transformation matrix in column major orientation:
          *
@@ -23,6 +23,7 @@ export default class Circle {
         };
 
         this.color = color;
+        this.group = group;
         this.name = "";
         this.rowIndex = 0;
         this.colIndex = 0;
@@ -56,6 +57,10 @@ export default class Circle {
 
     getColor() {
         return this.color;
+    }
+
+    getGroup() {
+        return this.group;
     }
 
 

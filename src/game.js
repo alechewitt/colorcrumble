@@ -83,6 +83,10 @@ export default class Game {
         this.createCircleBufferData();
         this.createGameGridObj();
         this.drawCircles();
+        let self = this;
+        setTimeout(function(){
+            self.checkForMatches();
+        }, 1000);
     }
 
     initCanvas() {
@@ -235,10 +239,11 @@ export default class Game {
                 let colKey = "col_" + k;
                 // Random color:
                 let colorInt = Math.floor(Math.random() * colors.length);
+                let newColor = colors[colorInt];
 
                 // Create a new circle
-                let circle = new Circle(colors[colorInt].color);
-                circle.name = colors[colorInt].name + "___rowinitial_" + i + "___colinitial_" + k;
+                let circle = new Circle(newColor.color, newColor.group);
+                circle.name = colors[colorInt].group + "___rowinitial_" + i + "___colinitial_" + k;
                 circle.translate(xTranslation, yTranslation);
                 circle.rowIndex = i;
                 circle.colIndex = k;
@@ -307,17 +312,16 @@ export default class Game {
                 // Swap them in the circles object
                 this.circles["row_" + this.currentCircle.row]["col_" + this.currentCircle.col] = this.swappingCircle.circle;
                 this.circles["row_" + this.swappingCircle.row]["col_" + this.swappingCircle.col] = this.currentCircle.circle;
-                let randomCircle;
-                if (this.swappingCircle.row == this.currentCircle.row) {
-                    randomCircle = this.circles["row_" + (this.swappingCircle.row + 1)]["col_" + this.swappingCircle.col];
-                } else {
-                    // columns are the same
-                    randomCircle = this.circles["row_" + this.swappingCircle.row]["col_" + (this.swappingCircle.col + 1)];
-                }
+                this.currentCircle.circle.rowIndex = this.swappingCircle.row;
+                this.currentCircle.circle.colIndex = this.swappingCircle.col;
+
+                this.swappingCircle.circle.rowIndex = this.currentCircle.row;
+                this.swappingCircle.circle.colIndex = this.currentCircle.col;
+
                 this.drawCircles();
-                //this.removeCircle(this.currentCircle.circle, this.swappingCircle.row, this.swappingCircle.col);
-                //this.removeCircles([this.swappingCircle.circle, this.currentCircle.circle, randomCircle]);
-                this.removeCircles([this.swappingCircle.circle, this.currentCircle.circle]);
+                //this.removeCircles([this.swappingCircle.circle, this.currentCircle.circle]);
+                let self = this;
+                self.checkForMatches();
             }
             else {
                 // Put them back in their original places
@@ -427,10 +431,169 @@ export default class Game {
             swappingCircle.translate(xMovementSwappingCircle, yMovementSwappingCircle);
             this.drawCircles();
         }
+    }
+
+    /**
+     * Method checks Whole board for matches, upon finding will animate
+     */
+    checkForMatches() {
+        // Loop through rows
+        let self = this;
+        let totalMatches = 0;
+        this.checkRowsForMatch(0)
+            .then(function (rowsTotalMatches) {
+                totalMatches += rowsTotalMatches;
+                console.log("\n");
+                console.log("rows total matches: ", rowsTotalMatches);
+                return self.checkColsForMatch(0);
+            })
+            .then(function (colTotalMatches) {
+                totalMatches += colTotalMatches;
+                console.log("cols total: ", colTotalMatches);
+                console.log("TOTAL ROWS + COLS = ", totalMatches);
+                console.log("== ALL FINISHED ==");
+                console.log("\n");
+                if (totalMatches != 0) {
+                    // There could be more matches in there
+                    self.checkForMatches();
+                }
+            });
 
     }
 
+    checkRowsForMatch() {
+        let deferred = {};
+        deferred.promise = new Promise(function (resolve, reject) {
+            deferred.resolve = resolve;
+            deferred.reject = reject;
+        });
+        let numberMatches = 0;
+        let removingCircles = false;
+        let matchedCircles = [];
+        for (let row = 0; row < this.numRows; row++) {
+            let rowKey = "row_" + row;
+            for (let col = 0; col < this.circlesPerRow - 1; col++) {
+                let circleOne = this.circles[rowKey]["col_" + col];
+                let circleTwo = this.circles[rowKey]["col_" + (col + 1)];
+                //console.log("Logging group: ", circleOne.getGroup());
+                //console.log("Logging group: ", circleTwo.getGroup());
+                if (circleOne.getGroup() == circleTwo.getGroup()) {
+                    //console.log("We have found a match!!");
+                    if (numberMatches === 0) {
+                        matchedCircles = [circleOne, circleTwo];
+                    } else {
+                        matchedCircles.push(circleTwo);
+                    }
+                    // The two circles match
+                    numberMatches += 1;
+
+                } else {
+                    // No match, lets see if previous matches have more than 3 circles
+                    //console.log("no match");
+                    if (numberMatches >= 2) {
+                        // We have enough
+                        let self = this;
+                        removingCircles = true;
+                        this.removeCircles(matchedCircles)
+                            .then(function () {
+                                // Re check the board for more matches
+                                self.checkRowsForMatch()
+                                    .then(function (childrenTotalMatches) {
+                                        let matchesSoFar = childrenTotalMatches + 1;
+                                        deferred.resolve(matchesSoFar);
+                                    });
+                            });
+                        break
+                    }
+                    else {
+                        numberMatches = 0;
+                        matchedCircles = [];
+                    }
+                }
+            }
+            if (removingCircles) {
+                break;
+            } else {
+                numberMatches = 0;
+                matchedCircles = [];
+            }
+        }
+        if (!removingCircles) {
+            // Whole pass complete with no matches in the rows found
+            deferred.resolve(0)
+        }
+        return deferred.promise;
+    }
+
+    checkColsForMatch() {
+        let deferred = {};
+        deferred.promise = new Promise(function (resolve, reject) {
+            deferred.resolve = resolve;
+            deferred.reject = reject;
+        });
+        let numberMatches = 0;
+        let removingCircles = false;
+        let matchedCircles = [];
+        for (let colIndex = 0; colIndex < this.circlesPerRow; colIndex++) {
+            let colKey = "col_" + colIndex;
+            for (let row = 0; row < this.numRows - 1; row++) {
+                let circleOne = this.circles["row_" + row][colKey];
+                let circleTwo = this.circles["row_" + (row + 1)][colKey];
+                if (circleOne.getGroup() == circleTwo.getGroup()) {
+                    if (numberMatches === 0) {
+                        matchedCircles = [circleOne, circleTwo];
+                    } else {
+                        matchedCircles.push(circleTwo);
+                    }
+                    // The two circles match
+                    numberMatches += 1;
+                }
+                else {
+                    // No match, lets see if previous matches have more than 3 circles
+                    if (numberMatches >= 2) {
+                        // We have enough
+                        let self = this;
+                        this.removeCircles(matchedCircles)
+                            .then(function () {
+                                // Re check the board for more matches
+                                self.checkColsForMatch().
+                                    then(function(childrenColsMatches){
+                                        let matchesSoFar = childrenColsMatches + 1;
+                                        // We have finished this animation and all of its children animations
+                                        deferred.resolve(matchesSoFar);
+                                    });
+                            });
+                        removingCircles = true;
+                        break
+                    }
+                    else {
+                        numberMatches = 0;
+                        matchedCircles = [];
+                    }
+                }
+            }
+            if (removingCircles) {
+                break;
+            }
+            else {
+                // Reset the number of matches before going on to the next column
+                numberMatches = 0;
+                matchedCircles = [];
+            }
+        }
+        if (!removingCircles) {
+            deferred.resolve(0)
+        }
+        return deferred.promise;
+    }
+
     removeCircles(circles) {
+        let deferred = {};
+        deferred.promise = new Promise(function(resolve, reject) {
+            deferred.resolve = resolve;
+            deferred.reject = reject;
+        });
+
         this.animating = true;
         let self = this;
         //let topCircleMatrix = this.circles["row_0"]["col_" + col].getMat3();
@@ -445,8 +608,9 @@ export default class Game {
             .then(function () {
                 console.log("All Columns are in their correct position");
                 self.animating = false;
+                deferred.resolve();
             });
-        //}
+        return deferred.promise;
     }
 
 
@@ -518,12 +682,6 @@ export default class Game {
         // Now have Map of the columns
         for (let [colInt, colObj] of colsAnimating) {
             let overallDistanceToFall = oneCircleFall * colObj.numberCircles;
-            //let overallDistanceToFall = oneCircleFall;
-            console.log("[t] Logging overall distance to Fall: ", overallDistanceToFall);
-            console.log("[t] margin: ", this.margin);
-            console.log("[t] radius: ", this.circleRadius);
-            console.log("distanceToFinish: ", (overallDistanceToFall / SCALE_FACTOR));
-            console.log("distanceToSurface: ", ((overallDistanceToFall + this.margin) / SCALE_FACTOR));
             let column = {
                 circles              : [],
                 initialMats          : [],
@@ -549,7 +707,6 @@ export default class Game {
             }
 
             // Create the new circles for this row
-            console.log("Creating new circles-- ");
             let amountToTranslate = -1 * oneCircleFall;
             let topCircleMat;
             if (colObj.topCircleRow === 0){
@@ -560,20 +717,17 @@ export default class Game {
             }
 
             for (let rowIndex = colObj.numberCircles -1; rowIndex >= 0; rowIndex--) {
-                console.log("Row index: ", rowIndex);
                 // Get a new random color
                 let colorInt = Math.floor(Math.random() * colors.length);
-                let newColor = colors[colorInt].color;
+                let newColor = colors[colorInt];
 
                 // Create a new circle to be added to the object at the top
-                let newCircle = new Circle(newColor);
+                let newCircle = new Circle(newColor.color, newColor.group);
                 newCircle.setMat3(topCircleMat);
                 newCircle.translate(0, amountToTranslate);
                 newCircle.colIndex = colInt;
                 newCircle.rowIndex = rowIndex;
                 this.circles["row_" + rowIndex][colKey] = newCircle;
-                console.log("-- NEW CIRCLE --");
-                console.log(newCircle);
                 // Add to the circles to be animated downwards
                 column.circles.push(newCircle);
                 column.initialMats.push(newCircle.getMat3());
@@ -583,7 +737,6 @@ export default class Game {
             }
             fallingCols.push(column);
         }
-        console.log("Before return Falling Circles: ", fallingCols);
         return fallingCols;
     }
 
@@ -594,7 +747,6 @@ export default class Game {
      */
     recursiveDrop(fallingColumns, deferred = {}) {
         // Create a promise if we don't already have one
-        console.log("Logging deferred: ", deferred);
         if (!deferred.hasOwnProperty("resolve")) {
             deferred.promise = new Promise(function (resolve, reject) {
                 deferred.resolve = resolve;
@@ -603,7 +755,6 @@ export default class Game {
         }
 
         let allColumnsFinishedAnimating = true;
-        console.log("Logging all fallingColumns: ", fallingColumns);
         for (let column of fallingColumns) {
             if (column.animationFinished) {
                 continue;
@@ -611,19 +762,15 @@ export default class Game {
             let timeNow = new Date().getTime();
             let deltaT = (timeNow - column.initialTime) / 1000;
             column.initialTime = timeNow;
-            console.log("Distance calculated initialVelocity: ", column.initialVelocity);
             // s = ut + 0.5at^2
             let distance = (column.initialVelocity * deltaT) + (0.5 * ACCELERATION * Math.pow(deltaT, 2));
             let finalVelocity;
-            console.log("Distance to travel: ", distance);
-            console.log("Distance to surface: ", column.distanceToSurface);
             if (distance <= column.distanceToSurface) {
                 column.distanceToSurface -= distance;
                 column.distanceToFinish -= distance;
                 let goingDown = distance > 0;
                 if (column.bouncesLeft === 0 && goingDown && column.distanceToFinish <= 0) {
                     // This is now the nearest to where we stop it moving
-                    console.log("-STOPPING-");
                     for (let i = 0; i <column.circles.length; i++) {
                         column.circles[i].setMat3(column.initialMats[i]);
                         column.circles[i].translate(0, column.overallDistanceToFall);
@@ -638,7 +785,6 @@ export default class Game {
                 }
 
             } else if (column.bouncesLeft > 0) {
-                console.log("We are bouncing!");
                 // This is a bounce
                 column.bouncesLeft -= 1;
                 // v^2 = u^2 + 2as
@@ -663,14 +809,11 @@ export default class Game {
                 column.distanceToFinish = column.distanceToFinish - totalDistanceTraveled;
                 column.distanceToSurface = column.distanceToSurface - totalDistanceTraveled;
                 column.initialVelocity = finalVelocity;
-                console.log("Logging new initial velocity: ", column.initialVelocity);
                 allColumnsFinishedAnimating = false;
             }
             else {
                 // We should never land here:
                 // todo: determine if valid reason for landing here.
-                console.log("Landed in a bad place!!");
-                console.log("-STOPPING IN A BAD PLACE-");
                 for (let i = 0; i <column.circles.length; i++) {
                     column.circles[i].setMat3(column.initialMats[i]);
                     column.circles[i].translate(0, column.overallDistanceToFall);
@@ -679,14 +822,12 @@ export default class Game {
         }
         this.drawCircles();
 
-        console.log("Finished?: ", allColumnsFinishedAnimating);
         if (allColumnsFinishedAnimating) {
             // All columns have finished animating. Lets resolve the promise
             deferred.resolve();
         }
         else {
             let self = this;
-            console.log("Recursively calling Drop!");
             window.requestAnimationFrame(function(){
                 self.recursiveDrop(fallingColumns, deferred);
             });
