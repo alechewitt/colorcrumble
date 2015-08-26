@@ -92,7 +92,7 @@ export default class Game {
             antialias: true
         };
 
-        // == test for antialias support
+        // == Test for antialias support
         let testCanvas = document.createElement("canvas");
         let testGl = testCanvas.getContext("webgl", options) ||
             testCanvas.getContext("experimental-webgl", options);
@@ -103,16 +103,15 @@ export default class Game {
             this.devicePixelRatio *= 2;
             this.inputHandler.setDevicePixelRatio(this.devicePixelRatio);
         }
-        testCanvas = null;
 
-
-        // Real canvas
+        // == Real canvas
         this.canvas = document.getElementById(this.canvasId);
 
-        // set the display size of the canvas.
+        // Set the CSS display size of the canvas.
         this.canvas.style.width = this.desiredWidthInCSSPixels + "px";
         this.canvas.style.height = this.desiredHeightInCSSPixels + "px";
 
+        // Set the actual width of the canvas in real pixels
         this.canvas.width = this.desiredWidthInCSSPixels * this.devicePixelRatio;
         this.canvas.height = this.desiredHeightInCSSPixels * this.devicePixelRatio;
 
