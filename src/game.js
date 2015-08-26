@@ -468,7 +468,7 @@ export default class Game {
             deferred.reject = reject;
         });
         let numberMatches = 0;
-        let removingCircles = false;
+        let removeCircles = false;
         let matchedCircles = [];
         for (let row = 0; row < this.numRows; row++) {
             let rowKey = "row_" + row;
@@ -486,24 +486,29 @@ export default class Game {
                     }
                     // The two circles match
                     numberMatches += 1;
+                    if (numberMatches >= 2) {
+                        removeCircles = true;
+                    }
 
                 } else {
                     // No match, lets see if previous matches have more than 3 circles
                     //console.log("no match");
                     if (numberMatches >= 2) {
                         // We have enough
-                        let self = this;
-                        removingCircles = true;
-                        this.removeCircles(matchedCircles)
-                            .then(function () {
-                                // Re check the board for more matches
-                                self.checkRowsForMatch()
-                                    .then(function (childrenTotalMatches) {
-                                        let matchesSoFar = childrenTotalMatches + 1;
-                                        deferred.resolve(matchesSoFar);
-                                    });
-                            });
-                        break
+                        //let self = this;
+                        removeCircles = true;
+                        //this.removeCircles(matchedCircles)
+                        //    .then(function () {
+                        //        // Re check the board for more matches
+                        //        self.checkRowsForMatch()
+                        //            .then(function (childrenTotalMatches) {
+                        //                let matchesSoFar = childrenTotalMatches + 1;
+                        //                deferred.resolve(matchesSoFar);
+                        //            });
+                        //    });
+                        //break
+                        // todo: possibly remove this, then we can erase ultiple on the same row at the same time?
+                        break;
                     }
                     else {
                         numberMatches = 0;
@@ -511,14 +516,26 @@ export default class Game {
                     }
                 }
             }
-            if (removingCircles) {
-                break;
-            } else {
+            if (removeCircles) {
+                // We have enough
+                let self = this;
+                this.removeCircles(matchedCircles)
+                    .then(function () {
+                        // Re check the board for more matches
+                        self.checkRowsForMatch()
+                            .then(function (childrenTotalMatches) {
+                                let matchesSoFar = childrenTotalMatches + 1;
+                                deferred.resolve(matchesSoFar);
+                            });
+                    });
+                break
+            }
+            else{
                 numberMatches = 0;
                 matchedCircles = [];
             }
         }
-        if (!removingCircles) {
+        if (!removeCircles) {
             // Whole pass complete with no matches in the rows found
             deferred.resolve(0)
         }
