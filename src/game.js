@@ -59,11 +59,14 @@ export default class Game {
         this.graphicsCtx.createCircleBufferData(this.circleRadius);
         let circleKeys = this.createGameGridObj();
         this.graphicsCtx.setCircleKeys(circleKeys);
-        this.graphicsCtx.drawCircles(this.circles);
+        //this.graphicsCtx.drawCircles(this.circles);
         let self = this;
         setTimeout(function(){
-            self.checkForMatches();
-        }, 500);
+            self.graphicsCtx.drawCircles(self.circles);
+        }, 1000);
+        //setTimeout(function(){
+        //    self.checkForMatches();
+        //}, 500);
     }
 
     /**
@@ -316,16 +319,11 @@ export default class Game {
         this.checkRowsForMatch(0)
             .then(function (rowsTotalMatches) {
                 totalMatches += rowsTotalMatches;
-                console.log("\n");
-                console.log("rows total matches: ", rowsTotalMatches);
                 return self.checkColsForMatch(0);
             })
             .then(function (colTotalMatches) {
                 totalMatches += colTotalMatches;
-                console.log("cols total: ", colTotalMatches);
-                console.log("TOTAL ROWS + COLS = ", totalMatches);
-                console.log("== ALL FINISHED ==");
-                console.log("\n");
+                //console.log("TOTAL ROWS + COLS = ", totalMatches);
                 if (totalMatches != 0) {
                     // There could be more matches in there
                     self.checkForMatches();
@@ -481,7 +479,6 @@ export default class Game {
                 return self.recursiveDrop(fallingCircles);
             })
             .then(function () {
-                console.log("All Columns are in their correct position");
                 self.animating = false;
                 deferred.resolve();
             });
@@ -520,7 +517,6 @@ export default class Game {
     }
 
     updateCircleObjs(circlesArray) {
-        console.log("Updating circles object");
         /**
          * Map of objects containing
          * key: colIndex

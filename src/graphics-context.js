@@ -16,15 +16,26 @@ export default class GraphicsContext {
 
         this.circleKeys = [];
 
-        // Shader variables locations:
+        // Shader Attribute Locations locations:
         this.attributeCoords = null;
+        this.attributeTextureCoords = null;
+
+        // Shader Uniform locations
         this.uniformWidth = null;
         this.uniformHeight = null;
         this.uniformColor = null;
         this.uniformTransform = null;
+        this.uniformTexture = null;
+
+
+        // a VBO to hold the texture coordinates
+        this.textureCoordsBuffer = null;
+
+        // A texture object to hold the texture image.
+        this.textureObject = null;
 
         // Circle coordinate data
-        this.numVerticesPerCircle = 64;
+        this.numVerticesPerCircle = 3;
         this.bufferCoordsCircle = null;
 
         this.init_();
@@ -121,9 +132,40 @@ export default class GraphicsContext {
         this.uniformColor = this.gl.getUniformLocation(shaderProg, "u_color");
         this.uniformTransform = this.gl.getUniformLocation(shaderProg, "u_transform");
 
+        // Texture location
+        this.attributeTextureCoords = this.gl.getAttribLocation(shaderProg, "a_texCoords");
+        this.textureCoordsBuffer = this.gl.createBuffer();
+        this.uniformTexture = this.gl.getUniformLocation(shaderProg, "u_texture");
+
+        /* Create a texture object to hold the texture, and start loading it.
+         The draw() function will be called after the image loads. */
+
+        this.textureObject = this.gl.createTexture();
+
+        this.loadTexture( "/textures/brick001.jpg");  // load the texture image
         // Set the value for the uniform width and height letiables:
         this.gl.uniform1f(this.uniformWidth, this.canvas.width);
         this.gl.uniform1f(this.uniformHeight, this.canvas.height);
+    }
+
+    loadTexture(url) {
+        let self = this;
+        let img = new Image();  //  A DOM image element to represent the image.
+        img.onload = function() {
+            // This function will be called after the image loads successfully.
+            // We have to bind the texture object to the TEXTURE_2D target before
+            // loading the image into the texture object.
+            self.gl.bindTexture(self.gl.TEXTURE_2D, self.textureObject);
+            self.gl.texImage2D(self.gl.TEXTURE_2D, 0 , self.gl.RGBA, self.gl.RGBA, self.gl.UNSIGNED_BYTE, img);
+            self.gl.generateMipmap(self.gl.TEXTURE_2D);
+        };
+        img.onerror = function(e,f) {
+            // This function will be called if an error occurs while loading.
+            console.error("texture unable to load");
+            //draw();  // Draw without the texture; triangle will be black.
+        };
+        img.src = url;  // Start loading of the image.
+                        // This must be done after setting onload and onerror.
     }
 
     /**
@@ -166,6 +208,28 @@ export default class GraphicsContext {
             // Draw a circle
             this.gl.bindBuffer(this.gl.ARRAY_BUFFER, this.bufferCoordsCircle);
             this.gl.vertexAttribPointer(this.attributeCoords, 2, this.gl.FLOAT, false, 0, 0);
+
+
+            /* Set up values for the "a_texCoords" attribute */
+
+            var texCoords = new Float32Array( [ 0,0, 4,0, 2,4 ] );
+
+            this.gl.bindBuffer(this.gl.ARRAY_BUFFER, this.textureCoordsBuffer);
+            this.gl.bufferData(this.gl.ARRAY_BUFFER, texCoords, this.gl.STREAM_DRAW);
+            this.gl.vertexAttribPointer(this.attributeTextureCoords, 2, this.gl.FLOAT, false, 0, 0);
+            this.gl.enableVertexAttribArray(this.attributeTextureCoords);
+
+            /* set up the value for the uniform sampler variable.  The value is
+             zero since the texture object that we want to use is bound to
+             texture unit number zero.  In this program, the next two lines
+             are not needed, since TEXTURE0 is the default active texture unit,
+             and that never changes.  And the textureObject was bound to
+             texture unit 0 when the texture was loaded. */
+
+            this.gl.activeTexture(this.gl.TEXTURE0);
+            this.gl.bindTexture(this.gl.TEXTURE2D, this.textureObject);
+            this.gl.uniform1i(this.uniformTexture, 0 );
+
             this.gl.drawArrays(this.gl.TRIANGLE_FAN, 0, this.numVerticesPerCircle);
         }
     }

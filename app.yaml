@@ -10,6 +10,10 @@ handlers:
   static_files: dist/\1
   upload: dist/(.*)
 
+- url: /textures/(.+)
+  static_files: textures/\1
+  upload: textures/(.*)
+
 - url: /.*
   static_files: dist/index.html
   upload: dist/index.html
