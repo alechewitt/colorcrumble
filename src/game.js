@@ -1,12 +1,10 @@
 "use strict";
 
 import colors from "./color-options.js";
+import GraphicsContext from "./graphics-context.js";
 import Circle from "./circle.js";
 import InputHandler from "./input-handler.js";
 
-// Shaders:
-import vertexShader from "./vertex-shader.vert";
-import fragmentShader from "./fragment-shader.frag";
 
 const ACCELERATION = 9.8;
 
@@ -20,25 +18,8 @@ const COEF_RESTITUTION = 0.5;
 export default class Game {
 
     constructor(canvasId, canvasWidth, canvasHeight) {
-        this.canvasId = canvasId;
-        this.devicePixelRatio = window.devicePixelRatio || 1;
-        this.desiredWidthInCSSPixels = canvasWidth;
-        this.desiredHeightInCSSPixels = canvasHeight;
-
-        this.canvas = null;
-        this.gl = null;
-        this.circleKeys = [];
-
-        // Shader variables locations:
-        this.attributeCoords = null;
-        this.uniformWidth = null;
-        this.uniformHeight = null;
-        this.uniformColor = null;
-        this.uniformTransform = null;
-
-        // Implementation Variables
-        this.numVerticesPerCircle = 64;
-        this.bufferCoordsCircle = null;
+        this.graphicsCtx = new GraphicsContext(canvasId, canvasWidth, canvasHeight);
+        this.devicePixelRatio = this.graphicsCtx.getDevicePixelRatio();
 
         // Game Variables
         this.margin = 7 * this.devicePixelRatio;
@@ -73,107 +54,16 @@ export default class Game {
             col       : false
         };
         this.currentMoveAnimationFrame = false;
-    }
 
-    init() {
-        this.initCanvas();
-        let shaderProgram = this.createShaderProgram(vertexShader(), fragmentShader());
-        this.initGL(shaderProgram);
         this.calculateCirclesRadius();
-        this.createCircleBufferData();
-        this.createGameGridObj();
-        this.drawCircles();
+        this.graphicsCtx.createCircleBufferData(this.circleRadius);
+        let circleKeys = this.createGameGridObj();
+        this.graphicsCtx.setCircleKeys(circleKeys);
+        this.graphicsCtx.drawCircles(this.circles);
         let self = this;
         setTimeout(function(){
             self.checkForMatches();
-        }, 1000);
-    }
-
-    initCanvas() {
-        let options = {
-            alpha    : false,
-            depth    : false,
-            antialias: true
-        };
-
-        // == Test for antialias support
-        let testCanvas = document.createElement("canvas");
-        let testGl = testCanvas.getContext("webgl", options) ||
-            testCanvas.getContext("experimental-webgl", options);
-
-        let contextAttribs = testGl.getContextAttributes();
-        if (!contextAttribs.antialias) {
-            // If no antialiasing, lets double the devicePixelRatio
-            this.devicePixelRatio *= 2;
-            this.inputHandler.setDevicePixelRatio(this.devicePixelRatio);
-        }
-
-        // == Real canvas
-        this.canvas = document.getElementById(this.canvasId);
-
-        // Set the CSS display size of the canvas.
-        this.canvas.style.width = this.desiredWidthInCSSPixels + "px";
-        this.canvas.style.height = this.desiredHeightInCSSPixels + "px";
-
-        // Set the actual width of the canvas in real pixels
-        this.canvas.width = this.desiredWidthInCSSPixels * this.devicePixelRatio;
-        this.canvas.height = this.desiredHeightInCSSPixels * this.devicePixelRatio;
-
-        this.gl = this.canvas.getContext("webgl", options) ||
-            this.canvas.getContext("experimental-webgl", options);
-
-
-    }
-
-    createShaderProgram(vertexShaderSource, fragmentShaderSource) {
-        // Compile Vertex Shader:
-        let vsh = this.gl.createShader(this.gl.VERTEX_SHADER);
-        this.gl.shaderSource(vsh, vertexShaderSource);
-        this.gl.compileShader(vsh);
-        if (!this.gl.getShaderParameter(vsh, this.gl.COMPILE_STATUS)) {
-            throw "Error in vertex shader: " + this.gl.getShaderInfoLog(vsh);
-        }
-
-        // Compile Fragment Shader
-        let fsh = this.gl.createShader(this.gl.FRAGMENT_SHADER);
-        this.gl.shaderSource(fsh, fragmentShaderSource);
-        this.gl.compileShader(fsh);
-        if (!this.gl.getShaderParameter(fsh, this.gl.COMPILE_STATUS)) {
-            throw "Error in Fragment Shader: " + this.gl.getShaderInfoLog(fsh);
-        }
-
-        // Create Program and attach the compiled shaders
-        let prog = this.gl.createProgram();
-        this.gl.attachShader(prog, vsh);
-        this.gl.attachShader(prog, fsh);
-        this.gl.linkProgram(prog);
-        if (!this.gl.getProgramParameter(prog, this.gl.LINK_STATUS)) {
-            throw "LInk error in program: " + this.gl.getProgramInfoLog(prog);
-        }
-        return prog;
-    }
-
-    /**
-     * Get location of all the variables inside the shaders.
-     * Then set the value of the uniform variables u_width and u_height - These are the same for all
-     * the primitives we are going to draw.
-     * @param shaderProg
-     */
-    initGL(shaderProg) {
-        this.gl.useProgram(shaderProg);
-
-        this.attributeCoords = this.gl.getAttribLocation(shaderProg, "a_coords");
-        this.gl.enableVertexAttribArray(this.attributeCoords);
-
-        // Get uniform letiables location
-        this.uniformWidth = this.gl.getUniformLocation(shaderProg, "u_width");
-        this.uniformHeight = this.gl.getUniformLocation(shaderProg, "u_height");
-        this.uniformColor = this.gl.getUniformLocation(shaderProg, "u_color");
-        this.uniformTransform = this.gl.getUniformLocation(shaderProg, "u_transform");
-
-        // Set the value for the uniform width and height letiables:
-        this.gl.uniform1f(this.uniformWidth, this.canvas.width);
-        this.gl.uniform1f(this.uniformHeight, this.canvas.height);
+        }, 500);
     }
 
     /**
@@ -185,37 +75,18 @@ export default class Game {
         let circleRadiusAvg = 25 * this.devicePixelRatio;
 
         // Calculate number circles per row
-        let spacePerCircle = (this.canvas.width - this.margin) / ((circleRadiusAvg * 2) + this.margin);
+        let spacePerCircle = (this.graphicsCtx.getWidth() - this.margin) / ((circleRadiusAvg * 2) + this.margin);
         this.circlesPerRow = Math.floor(spacePerCircle);
 
         // Calculate circle sizes
-        let remainingSpace = this.canvas.width - ((this.circlesPerRow * this.margin) + this.margin);
+        let remainingSpace = this.graphicsCtx.getWidth() - ((this.circlesPerRow * this.margin) + this.margin);
         this.circleRadius = (remainingSpace / this.circlesPerRow) / 2;
 
         // Calculate number rows
-        let floatNumRows = (this.canvas.height - this.margin) / ((this.circleRadius * 2) + this.margin);
+        let floatNumRows = (this.graphicsCtx.getHeight() - this.margin) / ((this.circleRadius * 2) + this.margin);
         this.numRows = Math.ceil(floatNumRows);
 
         console.log("Circle radius: ", this.circleRadius);
-    }
-
-    /**
-     * Create the coordinates of a circle approximated as a
-     * 32 vertex regular polygon with two coordinates for each vertex
-     */
-    createCircleBufferData() {
-        // Float32Array to hold the coordinates
-        let coords = new Float32Array(this.numVerticesPerCircle * 2);
-        let k = 0;
-        for (let i = 0; i < this.numVerticesPerCircle; i++) {
-            let angle = i / this.numVerticesPerCircle * 2 * Math.PI;
-            coords[k++] = this.circleRadius * Math.cos(angle); // x-coor of vertex
-            coords[k++] = this.circleRadius * Math.sin(angle); // y-coord of vertex
-        }
-
-        this.bufferCoordsCircle = this.gl.createBuffer();
-        this.gl.bindBuffer(this.gl.ARRAY_BUFFER, this.bufferCoordsCircle);
-        this.gl.bufferData(this.gl.ARRAY_BUFFER, coords, this.gl.STATIC_DRAW);
     }
 
     /**
@@ -232,6 +103,7 @@ export default class Game {
 
         let yTranslation = this.margin + this.circleRadius;
         let xTranslation = this.margin + this.circleRadius;
+        let circleKeys = [];
         for (let i = 0; i < this.numRows; i++) {
             let rowKey = "row_" + i;
             this.circles[rowKey] = {};
@@ -252,7 +124,7 @@ export default class Game {
                 this.circles[rowKey][colKey] = circle;
 
                 // Add this key to our array of stored keys
-                this.circleKeys.push([rowKey, colKey]);
+                circleKeys.push([rowKey, colKey]);
 
                 // Increment the translation for the next circle:
                 xTranslation += offset;
@@ -261,6 +133,7 @@ export default class Game {
             yTranslation += offset;
             xTranslation = this.margin + this.circleRadius;
         }
+        return circleKeys;
     }
 
     movementStart(x, y) {
@@ -318,7 +191,7 @@ export default class Game {
                 this.swappingCircle.circle.rowIndex = this.currentCircle.row;
                 this.swappingCircle.circle.colIndex = this.currentCircle.col;
 
-                this.drawCircles();
+                this.graphicsCtx.drawCircles(this.circles);
                 //this.removeCircles([this.swappingCircle.circle, this.currentCircle.circle]);
                 let self = this;
                 self.checkForMatches();
@@ -327,7 +200,7 @@ export default class Game {
                 // Put them back in their original places
                 this.swappingCircle.circle.setMat3(this.swappingCircle.initialMat);
                 this.currentCircle.circle.setMat3(this.currentCircle.initialMat);
-                this.drawCircles();
+                this.graphicsCtx.drawCircles(this.circles);
             }
             // Reset current and swapping circles
             this.currentCircle = {
@@ -429,7 +302,7 @@ export default class Game {
             }
 
             swappingCircle.translate(xMovementSwappingCircle, yMovementSwappingCircle);
-            this.drawCircles();
+            this.graphicsCtx.drawCircles(this.circles);
         }
     }
 
@@ -475,10 +348,7 @@ export default class Game {
             for (let col = 0; col < this.circlesPerRow - 1; col++) {
                 let circleOne = this.circles[rowKey]["col_" + col];
                 let circleTwo = this.circles[rowKey]["col_" + (col + 1)];
-                //console.log("Logging group: ", circleOne.getGroup());
-                //console.log("Logging group: ", circleTwo.getGroup());
                 if (circleOne.getGroup() == circleTwo.getGroup()) {
-                    //console.log("We have found a match!!");
                     if (numberMatches === 0) {
                         matchedCircles = [circleOne, circleTwo];
                     } else {
@@ -492,21 +362,9 @@ export default class Game {
 
                 } else {
                     // No match, lets see if previous matches have more than 3 circles
-                    //console.log("no match");
                     if (numberMatches >= 2) {
-                        // We have enough
-                        //let self = this;
+                        // We have enough for a match
                         removeCircles = true;
-                        //this.removeCircles(matchedCircles)
-                        //    .then(function () {
-                        //        // Re check the board for more matches
-                        //        self.checkRowsForMatch()
-                        //            .then(function (childrenTotalMatches) {
-                        //                let matchesSoFar = childrenTotalMatches + 1;
-                        //                deferred.resolve(matchesSoFar);
-                        //            });
-                        //    });
-                        //break
                         // todo: possibly remove this, then we can erase ultiple on the same row at the same time?
                         break;
                     }
@@ -653,7 +511,7 @@ export default class Game {
             for (let circle of circles) {
                 circle.scale(0.8);
             }
-            this.drawCircles();
+            this.graphicsCtx.drawCircles(this.circles);
             window.requestAnimationFrame(function () {
                 self.animateDisappearance(circles, deferred);
             });
@@ -837,7 +695,7 @@ export default class Game {
                 }
             }
         }
-        this.drawCircles();
+        this.graphicsCtx.drawCircles(this.circles);
 
         if (allColumnsFinishedAnimating) {
             // All columns have finished animating. Lets resolve the promise
@@ -850,30 +708,5 @@ export default class Game {
             });
         }
         return deferred.promise;
-    }
-
-    /**
-     * Re paint the canvas with values from our circles object
-     */
-    drawCircles() {
-        this.gl.clearColor(1, 1, 1, 1);
-        this.gl.clear(this.gl.COLOR_BUFFER_BIT);
-
-        let circleKeysLen = this.circleKeys.length;
-        for (let i = 0; i < circleKeysLen; i++) {
-            let rowKey = this.circleKeys[i][0];
-            let colKey = this.circleKeys[i][1];
-
-            // Set the u_transform variable
-            this.gl.uniformMatrix3fv(this.uniformTransform, false, this.circles[rowKey][colKey].getMat3());
-
-            // Set u_color variable value:
-            this.gl.uniform3fv(this.uniformColor, this.circles[rowKey][colKey].getColor());
-
-            // Draw a circle
-            this.gl.bindBuffer(this.gl.ARRAY_BUFFER, this.bufferCoordsCircle);
-            this.gl.vertexAttribPointer(this.attributeCoords, 2, this.gl.FLOAT, false, 0, 0);
-            this.gl.drawArrays(this.gl.TRIANGLE_FAN, 0, this.numVerticesPerCircle);
-        }
     }
 }
