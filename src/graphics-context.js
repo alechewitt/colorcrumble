@@ -35,7 +35,7 @@ export default class GraphicsContext {
         this.textureObject = null;
 
         // Circle coordinate data
-        this.numVerticesPerCircle = 3;
+        this.numVerticesPerCircle = 32;
         this.bufferCoordsCircle = null;
 
         this.init_();
@@ -157,6 +157,10 @@ export default class GraphicsContext {
             // loading the image into the texture object.
             self.gl.bindTexture(self.gl.TEXTURE_2D, self.textureObject);
             self.gl.texImage2D(self.gl.TEXTURE_2D, 0 , self.gl.RGBA, self.gl.RGBA, self.gl.UNSIGNED_BYTE, img);
+            self.gl.texParameteri(self.gl.TEXTURE_2D, self.gl.TEXTURE_WRAP_S, self.gl.CLAMP_TO_EDGE);
+            self.gl.texParameteri(self.gl.TEXTURE_2D, self.gl.TEXTURE_WRAP_T, self.gl.CLAMP_TO_EDGE);
+            self.gl.texParameteri(self.gl.TEXTURE_2D, self.gl.TEXTURE_MIN_FILTER, self.gl.NEAREST);
+            self.gl.texParameteri(self.gl.TEXTURE_2D, self.gl.TEXTURE_MAG_FILTER, self.gl.NEAREST);
             self.gl.generateMipmap(self.gl.TEXTURE_2D);
         };
         img.onerror = function(e,f) {
@@ -174,17 +178,17 @@ export default class GraphicsContext {
      */
     createCircleBufferData(circleRadius) {
         // Float32Array to hold the coordinates
-        let coords = new Float32Array(this.numVerticesPerCircle * 2);
+        this.coords = new Float32Array(this.numVerticesPerCircle * 2);
         let k = 0;
         for (let i = 0; i < this.numVerticesPerCircle; i++) {
             let angle = i / this.numVerticesPerCircle * 2 * Math.PI;
-            coords[k++] = circleRadius * Math.cos(angle); // x-coor of vertex
-            coords[k++] = circleRadius * Math.sin(angle); // y-coord of vertex
+            this.coords[k++] = circleRadius * Math.cos(angle); // x-coor of vertex
+            this.coords[k++] = circleRadius * Math.sin(angle); // y-coord of vertex
         }
 
         this.bufferCoordsCircle = this.gl.createBuffer();
         this.gl.bindBuffer(this.gl.ARRAY_BUFFER, this.bufferCoordsCircle);
-        this.gl.bufferData(this.gl.ARRAY_BUFFER, coords, this.gl.STATIC_DRAW);
+        this.gl.bufferData(this.gl.ARRAY_BUFFER, this.coords, this.gl.STATIC_DRAW);
     }
 
     /**
@@ -212,7 +216,27 @@ export default class GraphicsContext {
 
             /* Set up values for the "a_texCoords" attribute */
 
-            var texCoords = new Float32Array( [ 0,0, 4,0, 2,4 ] );
+            //var texCoords = new Float32Array( [
+            //    0.0,  0.0,
+            //    1.0,  0.0,
+            //    0.0,  1.0,
+            //    0.0,  1.0,
+            //    1.0,  0.0,
+            //    1.0,  1.0 ] );
+            //let texCoords = this.coords;
+            //let texCoords = [];
+            let texCoords = new Float32Array(this.numVerticesPerCircle * 2);
+            let k = 0;
+            for (let i = 0; i < this.numVerticesPerCircle; i++) {
+                texCoords[k++] = (Math.cos(i*2*Math.PI/this.numVerticesPerCircle)+1)/2;
+                texCoords[k++] = (Math.sin(i*2*Math.PI/this.numVerticesPerCircle)+1)/2;
+
+                //let angle = i / this.numVerticesPerCircle * 2 * Math.PI;
+                //this.coords[k++] = circleRadius * Math.cos(angle); // x-coor of vertex
+                //this.coords[k++] = circleRadius * Math.sin(angle); // y-coord of vertex
+            }
+
+
 
             this.gl.bindBuffer(this.gl.ARRAY_BUFFER, this.textureCoordsBuffer);
             this.gl.bufferData(this.gl.ARRAY_BUFFER, texCoords, this.gl.STREAM_DRAW);
