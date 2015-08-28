@@ -66,7 +66,8 @@ export default class GraphicsContext {
 
     initCanvas_() {
         let options = {
-            alpha    : false,
+            //alpha    : false,
+            alpha    : true,
             depth    : false,
             antialias: true
         };
@@ -142,7 +143,10 @@ export default class GraphicsContext {
 
         this.textureObject = this.gl.createTexture();
 
-        this.loadTexture( "/textures/brick001.jpg");  // load the texture image
+        //this.loadTexture( "/textures/testImage2.jpg");  // load the texture image
+        this.loadTexture( "/textures/testImage2.png");  // load the texture image
+        //this.loadTexture( "/textures/white_2.png");  // load the texture image
+        //this.loadTexture( "/textures/brick001.jpg");  // load the texture image
         // Set the value for the uniform width and height letiables:
         this.gl.uniform1f(this.uniformWidth, this.canvas.width);
         this.gl.uniform1f(this.uniformHeight, this.canvas.height);
@@ -215,16 +219,7 @@ export default class GraphicsContext {
 
 
             /* Set up values for the "a_texCoords" attribute */
-
-            //var texCoords = new Float32Array( [
-            //    0.0,  0.0,
-            //    1.0,  0.0,
-            //    0.0,  1.0,
-            //    0.0,  1.0,
-            //    1.0,  0.0,
-            //    1.0,  1.0 ] );
-            //let texCoords = this.coords;
-            //let texCoords = [];
+            //todo: we only need to do this once!
             let texCoords = new Float32Array(this.numVerticesPerCircle * 2);
             let k = 0;
             for (let i = 0; i < this.numVerticesPerCircle; i++) {

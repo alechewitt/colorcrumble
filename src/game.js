@@ -63,7 +63,7 @@ export default class Game {
         let self = this;
         setTimeout(function(){
             self.graphicsCtx.drawCircles(self.circles);
-        }, 1000);
+        }, 500);
         //setTimeout(function(){
         //    self.checkForMatches();
         //}, 500);
