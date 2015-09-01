@@ -1,6 +1,6 @@
 "use strict";
 
-import colors from "./color-options.js";
+import counters from "./counters.js";
 import GraphicsContext from "./graphics-context.js";
 import Circle from "./circle.js";
 import InputHandler from "./input-handler.js";
@@ -55,10 +55,12 @@ export default class Game {
         };
         this.currentMoveAnimationFrame = false;
 
+        // Initialisation:
         this.calculateCirclesRadius();
         this.graphicsCtx.createCircleBufferData(this.circleRadius);
         let circleKeys = this.createGameGridObj();
         this.graphicsCtx.setCircleKeys(circleKeys);
+
         //this.graphicsCtx.drawCircles(this.circles);
         let self = this;
         setTimeout(function(){
@@ -112,13 +114,13 @@ export default class Game {
             this.circles[rowKey] = {};
             for (let k = 0; k < this.circlesPerRow; k++) {
                 let colKey = "col_" + k;
-                // Random color:
-                let colorInt = Math.floor(Math.random() * colors.length);
-                let newColor = colors[colorInt];
+                // Random counter:
+                let counterInt = Math.floor(Math.random() * counters.length);
+                let counter = counters[counterInt];
 
                 // Create a new circle
-                let circle = new Circle(newColor.color, newColor.group);
-                circle.name = colors[colorInt].group + "___rowinitial_" + i + "___colinitial_" + k;
+                let circle = new Circle(counter);
+                //circle.name = colors[colorInt].group + "___rowinitial_" + i + "___colinitial_" + k;
                 circle.translate(xTranslation, yTranslation);
                 circle.rowIndex = i;
                 circle.colIndex = k;
@@ -588,12 +590,12 @@ export default class Game {
             }
 
             for (let rowIndex = colObj.numberCircles -1; rowIndex >= 0; rowIndex--) {
-                // Get a new random color
-                let colorInt = Math.floor(Math.random() * colors.length);
-                let newColor = colors[colorInt];
+                // Get a new random counter
+                let counterInt = Math.floor(Math.random() * counters.length);
+                let counter = counters[counterInt];
 
                 // Create a new circle to be added to the object at the top
-                let newCircle = new Circle(newColor.color, newColor.group);
+                let newCircle = new Circle(counter);
                 newCircle.setMat3(topCircleMat);
                 newCircle.translate(0, amountToTranslate);
                 newCircle.colIndex = colInt;

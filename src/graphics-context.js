@@ -66,10 +66,10 @@ export default class GraphicsContext {
 
     initCanvas_() {
         let options = {
-            //alpha    : false,
-            alpha    : true,
+            alpha    : false,
+            //alpha    : true,
             depth    : false,
-            antialias: true
+            antialias: true,
         };
 
         // == Real canvas
@@ -144,10 +144,11 @@ export default class GraphicsContext {
         this.textureObject = this.gl.createTexture();
 
         //this.loadTexture( "/textures/testImage2.jpg");  // load the texture image
-        this.loadTexture( "/textures/testImage2.png");  // load the texture image
+        //this.loadTexture( "/textures/testImage2.png");  // load the texture image
+        this.loadTexture( "/textures/twoThirdsTest.png");  // load the texture image
         //this.loadTexture( "/textures/white_2.png");  // load the texture image
         //this.loadTexture( "/textures/brick001.jpg");  // load the texture image
-        // Set the value for the uniform width and height letiables:
+        // Set the value for the uniform width and height variables:
         this.gl.uniform1f(this.uniformWidth, this.canvas.width);
         this.gl.uniform1f(this.uniformHeight, this.canvas.height);
     }
