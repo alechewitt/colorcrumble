@@ -60,12 +60,12 @@ export default class Game {
         this.graphicsCtx.createCircleBufferData(this.circleRadius);
         let circleKeys = this.createGameGridObj();
         this.graphicsCtx.setCircleKeys(circleKeys);
-
+        this.graphicsCtx.loadTextures(counters);
         //this.graphicsCtx.drawCircles(this.circles);
         let self = this;
         setTimeout(function(){
             self.graphicsCtx.drawCircles(self.circles);
-        }, 500);
+        }, 2000);
         //setTimeout(function(){
         //    self.checkForMatches();
         //}, 500);

@@ -127,25 +127,27 @@ export default class GraphicsContext {
         this.attributeCoords = this.gl.getAttribLocation(shaderProg, "a_coords");
         this.gl.enableVertexAttribArray(this.attributeCoords);
 
-        // Get uniform letiables location
+        // Get uniform variables location
         this.uniformWidth = this.gl.getUniformLocation(shaderProg, "u_width");
         this.uniformHeight = this.gl.getUniformLocation(shaderProg, "u_height");
         this.uniformColor = this.gl.getUniformLocation(shaderProg, "u_color");
         this.uniformTransform = this.gl.getUniformLocation(shaderProg, "u_transform");
 
-        // Texture location
+        // Texture coords attribute location
         this.attributeTextureCoords = this.gl.getAttribLocation(shaderProg, "a_texCoords");
-        this.textureCoordsBuffer = this.gl.createBuffer();
+        this.gl.enableVertexAttribArray(this.attributeTextureCoords);
+
+        // Texture uniform variable location
         this.uniformTexture = this.gl.getUniformLocation(shaderProg, "u_texture");
 
         /* Create a texture object to hold the texture, and start loading it.
          The draw() function will be called after the image loads. */
 
-        this.textureObject = this.gl.createTexture();
+        //this.textureObject = this.gl.createTexture();
 
         //this.loadTexture( "/textures/testImage2.jpg");  // load the texture image
         //this.loadTexture( "/textures/testImage2.png");  // load the texture image
-        this.loadTexture( "/textures/twoThirdsTest.png");  // load the texture image
+        //this.loadTexture( "/textures/twoThirdsTest.png");  // load the texture image
         //this.loadTexture( "/textures/white_2.png");  // load the texture image
         //this.loadTexture( "/textures/brick001.jpg");  // load the texture image
         // Set the value for the uniform width and height variables:
@@ -153,28 +155,38 @@ export default class GraphicsContext {
         this.gl.uniform1f(this.uniformHeight, this.canvas.height);
     }
 
-    loadTexture(url) {
+    /**
+     * Load all the counters inside the counter array
+     * @param counters
+     */
+    loadTextures(counters) {
+
         let self = this;
-        let img = new Image();  //  A DOM image element to represent the image.
-        img.onload = function() {
-            // This function will be called after the image loads successfully.
-            // We have to bind the texture object to the TEXTURE_2D target before
-            // loading the image into the texture object.
-            self.gl.bindTexture(self.gl.TEXTURE_2D, self.textureObject);
-            self.gl.texImage2D(self.gl.TEXTURE_2D, 0 , self.gl.RGBA, self.gl.RGBA, self.gl.UNSIGNED_BYTE, img);
-            self.gl.texParameteri(self.gl.TEXTURE_2D, self.gl.TEXTURE_WRAP_S, self.gl.CLAMP_TO_EDGE);
-            self.gl.texParameteri(self.gl.TEXTURE_2D, self.gl.TEXTURE_WRAP_T, self.gl.CLAMP_TO_EDGE);
-            self.gl.texParameteri(self.gl.TEXTURE_2D, self.gl.TEXTURE_MIN_FILTER, self.gl.NEAREST);
-            self.gl.texParameteri(self.gl.TEXTURE_2D, self.gl.TEXTURE_MAG_FILTER, self.gl.NEAREST);
-            self.gl.generateMipmap(self.gl.TEXTURE_2D);
-        };
-        img.onerror = function(e,f) {
-            // This function will be called if an error occurs while loading.
-            console.error("texture unable to load");
-            //draw();  // Draw without the texture; triangle will be black.
-        };
-        img.src = url;  // Start loading of the image.
-                        // This must be done after setting onload and onerror.
+        for (let counter of counters) {
+            let img = new Image();  //  A DOM image element to represent the image.
+            counter.textureObject = this.gl.createTexture();
+            img.onload = function() {
+                // This function will be called after the image loads successfully.
+                // We have to bind the texture object to the TEXTURE_2D target before
+                // loading the image into the texture object.
+                self.gl.bindTexture(self.gl.TEXTURE_2D, counter.textureObject);
+                self.gl.texImage2D(self.gl.TEXTURE_2D, 0 , self.gl.RGBA, self.gl.RGBA, self.gl.UNSIGNED_BYTE, img);
+                self.gl.texParameteri(self.gl.TEXTURE_2D, self.gl.TEXTURE_WRAP_S, self.gl.CLAMP_TO_EDGE);
+                self.gl.texParameteri(self.gl.TEXTURE_2D, self.gl.TEXTURE_WRAP_T, self.gl.CLAMP_TO_EDGE);
+                self.gl.texParameteri(self.gl.TEXTURE_2D, self.gl.TEXTURE_MIN_FILTER, self.gl.NEAREST);
+                self.gl.texParameteri(self.gl.TEXTURE_2D, self.gl.TEXTURE_MAG_FILTER, self.gl.NEAREST);
+                self.gl.generateMipmap(self.gl.TEXTURE_2D);
+            };
+            img.onerror = function(e,f) {
+                // This function will be called if an error occurs while loading.
+                console.error("texture unable to load");
+                //draw();  // Draw without the texture; triangle will be black.
+            };
+            console.log("Loading texture: ", counter.textureUrl);
+            img.src = counter.textureUrl;  // Start loading of the image.
+                            // This must be done after setting onload and onerror.
+        }
+
     }
 
     /**
@@ -184,16 +196,27 @@ export default class GraphicsContext {
     createCircleBufferData(circleRadius) {
         // Float32Array to hold the coordinates
         this.coords = new Float32Array(this.numVerticesPerCircle * 2);
+        this.texCoords = new Float32Array(this.numVerticesPerCircle * 2);
+
         let k = 0;
+        let j = 0;
         for (let i = 0; i < this.numVerticesPerCircle; i++) {
             let angle = i / this.numVerticesPerCircle * 2 * Math.PI;
             this.coords[k++] = circleRadius * Math.cos(angle); // x-coor of vertex
             this.coords[k++] = circleRadius * Math.sin(angle); // y-coord of vertex
+
+            this.texCoords[j++] = (Math.cos(i*2*Math.PI/this.numVerticesPerCircle)+1)/2;
+            this.texCoords[j++] = (Math.sin(i*2*Math.PI/this.numVerticesPerCircle)+1)/2;
         }
 
         this.bufferCoordsCircle = this.gl.createBuffer();
         this.gl.bindBuffer(this.gl.ARRAY_BUFFER, this.bufferCoordsCircle);
         this.gl.bufferData(this.gl.ARRAY_BUFFER, this.coords, this.gl.STATIC_DRAW);
+
+        this.textureCoordsBuffer = this.gl.createBuffer();
+        this.gl.bindBuffer(this.gl.ARRAY_BUFFER, this.textureCoordsBuffer);
+        this.gl.bufferData(this.gl.ARRAY_BUFFER, this.texCoords, this.gl.STATIC_DRAW);
+
     }
 
     /**
@@ -208,48 +231,26 @@ export default class GraphicsContext {
             let rowKey = this.circleKeys[i][0];
             let colKey = this.circleKeys[i][1];
 
+            let circle = circles[rowKey][colKey];
+
             // Set the u_transform variable
-            this.gl.uniformMatrix3fv(this.uniformTransform, false, circles[rowKey][colKey].getMat3());
+            this.gl.uniformMatrix3fv(this.uniformTransform, false, circle.getMat3());
 
             // Set u_color variable value:
-            this.gl.uniform3fv(this.uniformColor, circles[rowKey][colKey].getColor());
+            this.gl.uniform3fv(this.uniformColor, circle.getColor());
 
-            // Draw a circle
+            // Set the coordinates attribute buffer
             this.gl.bindBuffer(this.gl.ARRAY_BUFFER, this.bufferCoordsCircle);
             this.gl.vertexAttribPointer(this.attributeCoords, 2, this.gl.FLOAT, false, 0, 0);
 
-
-            /* Set up values for the "a_texCoords" attribute */
-            //todo: we only need to do this once!
-            let texCoords = new Float32Array(this.numVerticesPerCircle * 2);
-            let k = 0;
-            for (let i = 0; i < this.numVerticesPerCircle; i++) {
-                texCoords[k++] = (Math.cos(i*2*Math.PI/this.numVerticesPerCircle)+1)/2;
-                texCoords[k++] = (Math.sin(i*2*Math.PI/this.numVerticesPerCircle)+1)/2;
-
-                //let angle = i / this.numVerticesPerCircle * 2 * Math.PI;
-                //this.coords[k++] = circleRadius * Math.cos(angle); // x-coor of vertex
-                //this.coords[k++] = circleRadius * Math.sin(angle); // y-coord of vertex
-            }
-
-
-
+            // Set the texture coordinates buffer
             this.gl.bindBuffer(this.gl.ARRAY_BUFFER, this.textureCoordsBuffer);
-            this.gl.bufferData(this.gl.ARRAY_BUFFER, texCoords, this.gl.STREAM_DRAW);
             this.gl.vertexAttribPointer(this.attributeTextureCoords, 2, this.gl.FLOAT, false, 0, 0);
-            this.gl.enableVertexAttribArray(this.attributeTextureCoords);
 
-            /* set up the value for the uniform sampler variable.  The value is
-             zero since the texture object that we want to use is bound to
-             texture unit number zero.  In this program, the next two lines
-             are not needed, since TEXTURE0 is the default active texture unit,
-             and that never changes.  And the textureObject was bound to
-             texture unit 0 when the texture was loaded. */
+            // Set the texture object to the default texture unit:
+            this.gl.bindTexture(this.gl.TEXTURE_2D, circle.getTextureObj());
 
-            this.gl.activeTexture(this.gl.TEXTURE0);
-            this.gl.bindTexture(this.gl.TEXTURE2D, this.textureObject);
-            this.gl.uniform1i(this.uniformTexture, 0 );
-
+            // Draw the circle:
             this.gl.drawArrays(this.gl.TRIANGLE_FAN, 0, this.numVerticesPerCircle);
         }
     }

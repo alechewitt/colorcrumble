@@ -64,6 +64,10 @@ export default class Circle {
         return this.counter.colorGroup.name;
     }
 
+    getTextureObj() {
+        return this.counter.textureObject;
+    }
+
 
     translate(dx, dy) {
         this.transMatrix.e += dx;
