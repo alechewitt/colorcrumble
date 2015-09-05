@@ -66,7 +66,7 @@ export default class GraphicsContext {
 
     initCanvas_() {
         let options = {
-            alpha    : false,
+            alpha    : true,
             //alpha    : true,
             depth    : false,
             antialias: true,
@@ -140,16 +140,6 @@ export default class GraphicsContext {
         // Texture uniform variable location
         this.uniformTexture = this.gl.getUniformLocation(shaderProg, "u_texture");
 
-        /* Create a texture object to hold the texture, and start loading it.
-         The draw() function will be called after the image loads. */
-
-        //this.textureObject = this.gl.createTexture();
-
-        //this.loadTexture( "/textures/testImage2.jpg");  // load the texture image
-        //this.loadTexture( "/textures/testImage2.png");  // load the texture image
-        //this.loadTexture( "/textures/twoThirdsTest.png");  // load the texture image
-        //this.loadTexture( "/textures/white_2.png");  // load the texture image
-        //this.loadTexture( "/textures/brick001.jpg");  // load the texture image
         // Set the value for the uniform width and height variables:
         this.gl.uniform1f(this.uniformWidth, this.canvas.width);
         this.gl.uniform1f(this.uniformHeight, this.canvas.height);
