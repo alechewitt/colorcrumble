@@ -367,7 +367,7 @@ export default class Game {
                     if (numberMatches >= 2) {
                         // We have enough for a match
                         removeCircles = true;
-                        // todo: possibly remove this, then we can erase ultiple on the same row at the same time?
+                        // todo: possibly remove this, then we can erase multiple on the same row at the same time?
                         break;
                     }
                     else {
@@ -424,24 +424,29 @@ export default class Game {
                     }
                     // The two circles match
                     numberMatches += 1;
+                    if (numberMatches >= 2) {
+                        removingCircles = true;
+                    }
                 }
                 else {
                     // No match, lets see if previous matches have more than 3 circles
                     if (numberMatches >= 2) {
                         // We have enough
-                        let self = this;
-                        this.removeCircles(matchedCircles)
-                            .then(function () {
-                                // Re check the board for more matches
-                                self.checkColsForMatch().
-                                    then(function (childrenColsMatches) {
-                                        let matchesSoFar = childrenColsMatches + 1;
-                                        // We have finished this animation and all of its children animations
-                                        deferred.resolve(matchesSoFar);
-                                    });
-                            });
                         removingCircles = true;
-                        break
+                        break;
+                        //let self = this;
+                        //this.removeCircles(matchedCircles)
+                        //    .then(function () {
+                        //        // Re check the board for more matches
+                        //        self.checkColsForMatch().
+                        //            then(function (childrenColsMatches) {
+                        //                let matchesSoFar = childrenColsMatches + 1;
+                        //                // We have finished this animation and all of its children animations
+                        //                deferred.resolve(matchesSoFar);
+                        //            });
+                        //    });
+                        //removingCircles = true;
+                        //break
                     }
                     else {
                         numberMatches = 0;
@@ -450,7 +455,19 @@ export default class Game {
                 }
             }
             if (removingCircles) {
-                break;
+                let self = this;
+                this.removeCircles(matchedCircles)
+                    .then(function () {
+                        // Re check the board for more matches
+                        self.checkColsForMatch().
+                            then(function (childrenColsMatches) {
+                                let matchesSoFar = childrenColsMatches + 1;
+                                // We have finished this animation and all of its children animations
+                                deferred.resolve(matchesSoFar);
+                            });
+                    });
+                removingCircles = true;
+                break
             }
             else {
                 // Reset the number of matches before going on to the next column
