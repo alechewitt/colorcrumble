@@ -65,17 +65,12 @@ export default class Game {
             then(function () {
                 console.log("We have loaded all the textures");
                 self.graphicsCtx.drawCircles(self.circles);
+                setTimeout(function(){
+                    self.checkForMatches();
+                }, 300);
             }).catch(function () {
                 console.log("Error loading all the textures");
             });
-        //this.graphicsCtx.drawCircles(this.circles);
-        //let self = this;
-        //setTimeout(function(){
-        //    self.graphicsCtx.drawCircles(self.circles);
-        //}, 2000);
-        //setTimeout(function(){
-        //    self.checkForMatches();
-        //}, 500);
     }
 
     /**
