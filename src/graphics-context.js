@@ -160,32 +160,48 @@ export default class GraphicsContext {
      * @param counters
      */
     loadTextures(counters) {
-
         let self = this;
+        let deferred = {};
+        deferred.promise = new Promise(function (resolve, reject) {
+            deferred.resolve = resolve;
+            deferred.reject = reject;
+        });
+        let texturePromises = [];
         for (let counter of counters) {
-            let img = new Image();  //  A DOM image element to represent the image.
-            counter.textureObject = this.gl.createTexture();
-            img.onload = function() {
-                // This function will be called after the image loads successfully.
-                // We have to bind the texture object to the TEXTURE_2D target before
-                // loading the image into the texture object.
-                self.gl.bindTexture(self.gl.TEXTURE_2D, counter.textureObject);
-                self.gl.texImage2D(self.gl.TEXTURE_2D, 0 , self.gl.RGBA, self.gl.RGBA, self.gl.UNSIGNED_BYTE, img);
-                self.gl.texParameteri(self.gl.TEXTURE_2D, self.gl.TEXTURE_WRAP_S, self.gl.CLAMP_TO_EDGE);
-                self.gl.texParameteri(self.gl.TEXTURE_2D, self.gl.TEXTURE_WRAP_T, self.gl.CLAMP_TO_EDGE);
-                self.gl.texParameteri(self.gl.TEXTURE_2D, self.gl.TEXTURE_MIN_FILTER, self.gl.NEAREST);
-                self.gl.texParameteri(self.gl.TEXTURE_2D, self.gl.TEXTURE_MAG_FILTER, self.gl.NEAREST);
-                self.gl.generateMipmap(self.gl.TEXTURE_2D);
-            };
-            img.onerror = function(e,f) {
-                // This function will be called if an error occurs while loading.
-                console.error("texture unable to load");
-                //draw();  // Draw without the texture; triangle will be black.
-            };
-            console.log("Loading texture: ", counter.textureUrl);
-            img.src = counter.textureUrl;  // Start loading of the image.
-                            // This must be done after setting onload and onerror.
+            texturePromises.push(new Promise(function(resolve, reject){
+                let img = new Image();  //  A DOM image element to represent the image.
+                counter.textureObject = self.gl.createTexture();
+                img.onload = function() {
+                    // This function will be called after the image loads successfully.
+                    // We have to bind the texture object to the TEXTURE_2D target before
+                    // loading the image into the texture object.
+                    self.gl.bindTexture(self.gl.TEXTURE_2D, counter.textureObject);
+                    self.gl.texImage2D(self.gl.TEXTURE_2D, 0 , self.gl.RGBA, self.gl.RGBA, self.gl.UNSIGNED_BYTE, img);
+                    self.gl.texParameteri(self.gl.TEXTURE_2D, self.gl.TEXTURE_WRAP_S, self.gl.CLAMP_TO_EDGE);
+                    self.gl.texParameteri(self.gl.TEXTURE_2D, self.gl.TEXTURE_WRAP_T, self.gl.CLAMP_TO_EDGE);
+                    self.gl.texParameteri(self.gl.TEXTURE_2D, self.gl.TEXTURE_MIN_FILTER, self.gl.NEAREST);
+                    self.gl.texParameteri(self.gl.TEXTURE_2D, self.gl.TEXTURE_MAG_FILTER, self.gl.NEAREST);
+                    self.gl.generateMipmap(self.gl.TEXTURE_2D);
+                    resolve();
+                };
+                img.onerror = function(e,f) {
+                    console.error("texture unable to load");
+                    reject();
+                };
+                console.log("Loading texture: ", counter.textureUrl);
+                img.src = counter.textureUrl;  // Start loading of the image.
+            }));
+
         }
+        Promise.all(texturePromises).
+            then(function() {
+                deferred.resolve();
+            }).
+            catch(function() {
+                deferred.reject();
+            });
+
+        return deferred.promise;
 
     }
 

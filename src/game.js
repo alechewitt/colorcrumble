@@ -60,12 +60,19 @@ export default class Game {
         this.graphicsCtx.createCircleBufferData(this.circleRadius);
         let circleKeys = this.createGameGridObj();
         this.graphicsCtx.setCircleKeys(circleKeys);
-        this.graphicsCtx.loadTextures(counters);
-        //this.graphicsCtx.drawCircles(this.circles);
         let self = this;
-        setTimeout(function(){
-            self.graphicsCtx.drawCircles(self.circles);
-        }, 2000);
+        this.graphicsCtx.loadTextures(counters).
+            then(function () {
+                console.log("We have loaded all the textures");
+                self.graphicsCtx.drawCircles(self.circles);
+            }).catch(function () {
+                console.log("Error loading all the textures");
+            });
+        //this.graphicsCtx.drawCircles(this.circles);
+        //let self = this;
+        //setTimeout(function(){
+        //    self.graphicsCtx.drawCircles(self.circles);
+        //}, 2000);
         //setTimeout(function(){
         //    self.checkForMatches();
         //}, 500);
@@ -388,7 +395,7 @@ export default class Game {
                     });
                 break
             }
-            else{
+            else {
                 numberMatches = 0;
                 matchedCircles = [];
             }
@@ -432,7 +439,7 @@ export default class Game {
                             .then(function () {
                                 // Re check the board for more matches
                                 self.checkColsForMatch().
-                                    then(function(childrenColsMatches){
+                                    then(function (childrenColsMatches) {
                                         let matchesSoFar = childrenColsMatches + 1;
                                         // We have finished this animation and all of its children animations
                                         deferred.resolve(matchesSoFar);
@@ -464,7 +471,7 @@ export default class Game {
 
     removeCircles(circles) {
         let deferred = {};
-        deferred.promise = new Promise(function(resolve, reject) {
+        deferred.promise = new Promise(function (resolve, reject) {
             deferred.resolve = resolve;
             deferred.reject = reject;
         });
@@ -531,7 +538,7 @@ export default class Game {
          */
         let colsAnimating = new Map();
         for (let circle of circlesArray) {
-            if (colsAnimating.has(circle.colIndex)){
+            if (colsAnimating.has(circle.colIndex)) {
                 // We already have a circle in this column
                 let colInfo = colsAnimating.get(circle.colIndex);
                 colInfo.numberCircles += 1;
@@ -542,8 +549,8 @@ export default class Game {
             else {
                 // No circle in this column yet lets create one
                 let newColInfo = {
-                    numberCircles:   1,
-                    topCircleRow: circle.rowIndex
+                    numberCircles: 1,
+                    topCircleRow : circle.rowIndex
                 };
                 colsAnimating.set(circle.colIndex, newColInfo);
             }
@@ -582,14 +589,14 @@ export default class Game {
             // Create the new circles for this row
             let amountToTranslate = -1 * oneCircleFall;
             let topCircleMat;
-            if (colObj.topCircleRow === 0){
+            if (colObj.topCircleRow === 0) {
                 topCircleMat = this.circles["row_0"][colKey].getMat3WithoutScaling();
             }
             else {
                 topCircleMat = this.circles["row_" + colObj.numberCircles][colKey].getMat3WithoutScaling();
             }
 
-            for (let rowIndex = colObj.numberCircles -1; rowIndex >= 0; rowIndex--) {
+            for (let rowIndex = colObj.numberCircles - 1; rowIndex >= 0; rowIndex--) {
                 // Get a new random counter
                 let counterInt = Math.floor(Math.random() * counters.length);
                 let counter = counters[counterInt];
@@ -644,7 +651,7 @@ export default class Game {
                 let goingDown = distance > 0;
                 if (column.bouncesLeft === 0 && goingDown && column.distanceToFinish <= 0) {
                     // This is now the nearest to where we stop it moving
-                    for (let i = 0; i <column.circles.length; i++) {
+                    for (let i = 0; i < column.circles.length; i++) {
                         column.circles[i].setMat3(column.initialMats[i]);
                         column.circles[i].translate(0, column.overallDistanceToFall);
                     }
@@ -687,7 +694,7 @@ export default class Game {
             else {
                 // We should never land here:
                 // todo: determine if valid reason for landing here.
-                for (let i = 0; i <column.circles.length; i++) {
+                for (let i = 0; i < column.circles.length; i++) {
                     column.circles[i].setMat3(column.initialMats[i]);
                     column.circles[i].translate(0, column.overallDistanceToFall);
                 }
@@ -701,7 +708,7 @@ export default class Game {
         }
         else {
             let self = this;
-            window.requestAnimationFrame(function(){
+            window.requestAnimationFrame(function () {
                 self.recursiveDrop(fallingColumns, deferred);
             });
         }
