@@ -434,19 +434,6 @@ export default class Game {
                         // We have enough
                         removingCircles = true;
                         break;
-                        //let self = this;
-                        //this.removeCircles(matchedCircles)
-                        //    .then(function () {
-                        //        // Re check the board for more matches
-                        //        self.checkColsForMatch().
-                        //            then(function (childrenColsMatches) {
-                        //                let matchesSoFar = childrenColsMatches + 1;
-                        //                // We have finished this animation and all of its children animations
-                        //                deferred.resolve(matchesSoFar);
-                        //            });
-                        //    });
-                        //removingCircles = true;
-                        //break
                     }
                     else {
                         numberMatches = 0;
