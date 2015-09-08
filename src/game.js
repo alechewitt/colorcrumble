@@ -63,7 +63,7 @@ export default class Game {
         let self = this;
         this.graphicsCtx.loadTextures(counters).
             then(function () {
-                console.log("We have loaded all the textures");
+                //We have loaded all the textures, now draw the circles
                 self.graphicsCtx.drawCircles(self.circles);
                 setTimeout(function(){
                     self.checkForMatches();

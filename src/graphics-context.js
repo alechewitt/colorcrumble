@@ -185,7 +185,6 @@ export default class GraphicsContext {
                     console.error("texture unable to load");
                     reject();
                 };
-                console.log("Loading texture: ", counter.textureUrl);
                 img.src = counter.textureUrl;  // Start loading of the image.
             }));
 
