@@ -17,7 +17,7 @@ const COEF_RESTITUTION = 0.5;
 
 export default class Game {
 
-    constructor(canvasId, canvasWidth, canvasHeight) {
+    constructor(canvasId, canvasWidth, canvasHeight, scoreCallback) {
         this.graphicsCtx = new GraphicsContext(canvasId, canvasWidth, canvasHeight);
         this.devicePixelRatio = this.graphicsCtx.getDevicePixelRatio();
 
@@ -35,7 +35,8 @@ export default class Game {
             this.movementStart.bind(this),
             this.movementMove.bind(this),
             this.movementFinish.bind(this),
-            this.devicePixelRatio
+            this.devicePixelRatio,
+            this.graphicsCtx.getCanvas()
         );
 
         // In Game Variables
@@ -54,6 +55,9 @@ export default class Game {
             col       : false
         };
         this.currentMoveAnimationFrame = false;
+
+        this.score = 0;
+        this.scoreCallback = scoreCallback;
 
         // Initialisation:
         this.calculateCirclesRadius();
@@ -476,8 +480,12 @@ export default class Game {
         });
 
         this.animating = true;
+
+        // Lets update the score
+        this.score += 5;
+        this.scoreCallback(this.score);
+
         let self = this;
-        //let topCircleMatrix = this.circles["row_0"]["col_" + col].getMat3();
         let fallingCircles;
         let distanceToFall = (2 * self.circleRadius) + self.margin;
         this.animateDisappearance(circles).

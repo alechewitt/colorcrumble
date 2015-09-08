@@ -286,4 +286,8 @@ export default class GraphicsContext {
     getHeight() {
         return this.canvas.height;
     }
+
+    getCanvas() {
+        return this.canvas;
+    }
 }

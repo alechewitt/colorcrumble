@@ -2,28 +2,33 @@
 
 export default class InputHandler {
 
-    constructor(startCb, movementCb, endCb, devicePixelRatio) {
+    constructor(startCb, movementCb, endCb, devicePixelRatio, canvas) {
         this.devicePixelRatio = devicePixelRatio;
+        this.canvas = canvas;
 
         this.movementStartCb = startCb;
         this.movementMoveCb = movementCb;
         this.movementEndCb = endCb;
+
+        // Calculate the top of the canvas
+        let canvasRect = canvas.getBoundingClientRect();
+        this.marginTop = canvasRect.top;
 
         this.init();
     }
 
 
     init() {
-        document.addEventListener("touchstart", this.touchStartListener.bind(this), false);
-        document.addEventListener("mousedown", this.mouseDownListener.bind(this), false);
+        this.canvas.addEventListener("touchstart", this.touchStartListener.bind(this), false);
+        this.canvas.addEventListener("mousedown", this.mouseDownListener.bind(this), false);
 
-        document.addEventListener("mousemove", this.mouseMoveListener.bind(this), false);
-        document.addEventListener("touchmove", this.touchMoveListener.bind(this), false);
+        this.canvas.addEventListener("mousemove", this.mouseMoveListener.bind(this), false);
+        this.canvas.addEventListener("touchmove", this.touchMoveListener.bind(this), false);
 
-        document.addEventListener("mouseup", this.mouseUpListener.bind(this), false);
-        document.addEventListener("touchend", this.touchEndListener.bind(this), false);
-        document.addEventListener("touchleave", this.touchEndListener.bind(this), false);
-        document.addEventListener("touchcancel", this.touchEndListener.bind(this), false);
+        this.canvas.addEventListener("mouseup", this.mouseUpListener.bind(this), false);
+        this.canvas.addEventListener("touchend", this.touchEndListener.bind(this), false);
+        this.canvas.addEventListener("touchleave", this.touchEndListener.bind(this), false);
+        this.canvas.addEventListener("touchcancel", this.touchEndListener.bind(this), false);
     }
 
     setDevicePixelRatio(devicePixelRatio) {
@@ -35,14 +40,14 @@ export default class InputHandler {
         event.preventDefault();
 
         let x = event.touches[0].clientX * this.devicePixelRatio;
-        let y = event.touches[0].clientY * this.devicePixelRatio;
+        let y = (event.touches[0].clientY - this.marginTop) * this.devicePixelRatio;
         this.movementStartCb(x, y);
     }
 
     mouseDownListener(event) {
         event.preventDefault();
         let x = event.clientX * this.devicePixelRatio;
-        let y = event.clientY * this.devicePixelRatio;
+        let y = (event.clientY - this.marginTop) * this.devicePixelRatio;
         this.movementStartCb(x, y);
     }
 
@@ -51,7 +56,7 @@ export default class InputHandler {
         event.preventDefault();
 
         let x = event.touches[0].clientX * this.devicePixelRatio;
-        let y = event.touches[0].clientY * this.devicePixelRatio;
+        let y = (event.touches[0].clientY - this.marginTop) * this.devicePixelRatio;
         this.movementMoveCb(x, y);
 
     }
@@ -60,7 +65,7 @@ export default class InputHandler {
         event.preventDefault();
 
         let x = event.clientX * this.devicePixelRatio;
-        let y = event.clientY * this.devicePixelRatio;
+        let y = (event.clientY - this.marginTop) * this.devicePixelRatio;
         this.movementMoveCb(x, y);
     }
 
@@ -69,7 +74,7 @@ export default class InputHandler {
         event.preventDefault();
         console.log("Logging End Event: ", event);
         let x = event.changedTouches[0].clientX * this.devicePixelRatio;
-        let y = event.changedTouches[0].clientY * this.devicePixelRatio;
+        let y = (event.changedTouches[0].clientY - this.marginTop) * this.devicePixelRatio;
 
         this.movementEndCb(x, y);
     }
@@ -77,7 +82,7 @@ export default class InputHandler {
     mouseUpListener(event) {
         event.preventDefault();
         let x = event.clientX * this.devicePixelRatio;
-        let y = event.clientY * this.devicePixelRatio;
+        let y = (event.clientY - this.marginTop) * this.devicePixelRatio;
 
         this.movementEndCb(x, y);
     }

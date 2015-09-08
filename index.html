@@ -29,9 +29,32 @@
             margin: 0;
             overflow: hidden
         }
+        #header {
+            height: 40px;
+            background-color: #626EFF;
+            border-radius: 8px;
+            font-family : sans-serif;
+            position: relative;
+            margin: 10px 10px 5px 10px;
+            color: white;
+        }
+        .scoreWriting {
+            position: absolute;
+            top: 11px;
+            left: 11px;
+        }
+        #score {
+            position: absolute;
+            right: 11px;
+            top: 11px;
+        }
     </style>
 </head>
 <body>
+    <div id="header">
+        <div class="scoreWriting">SCORE</div>
+        <div id="score">140</div>
+    </div>
     <canvas id="gameCanvas"></canvas>
 </body>
 </html>
