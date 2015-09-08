@@ -95,6 +95,7 @@ export default [
         colorGroup: colors.PURPLE,
         description: "Two thirds"
     },
+
     {
         textureUrl: "/textures/sixteen.png",
         colorGroup: colors.PURPLE,
