@@ -26,6 +26,8 @@ export default class InputHandler {
         this.canvas.addEventListener("touchmove", this.touchMoveListener.bind(this), false);
 
         this.canvas.addEventListener("mouseup", this.mouseUpListener.bind(this), false);
+        this.canvas.addEventListener("mouseout", this.mouseUpListener.bind(this), false);
+        this.canvas.addEventListener("mouseleave", this.mouseUpListener.bind(this), false);
         this.canvas.addEventListener("touchend", this.touchEndListener.bind(this), false);
         this.canvas.addEventListener("touchleave", this.touchEndListener.bind(this), false);
         this.canvas.addEventListener("touchcancel", this.touchEndListener.bind(this), false);
