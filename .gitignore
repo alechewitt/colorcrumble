@@ -3,3 +3,4 @@ dist
 node_modules
 *.pyc
 config.py
+.DS_Store
