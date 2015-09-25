@@ -1,6 +1,6 @@
 Colorcrumble
 =============
-Source for Colorcrumble. A game of tactics and amazement. Destroy all the color circles for your chance to win!
+Source for Colorcrumble. A game of tactics and amazement. Match 3 or more colors in a row for your chance to win!
 
 See beta version here: [colorcrumble.com](http://colorcrumble.com) 
 
