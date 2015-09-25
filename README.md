@@ -4,6 +4,11 @@ Source for Colorcrumble. A game of tactics and amazement. Destroy all the color 
 
 See beta version here: [colorcrumble.com](http://colorcrumble.com) 
 
+There are currently three different levels implemented which can be seen by going to the following URLS:
+ - [colorcrumble.com/basic](http://colorcrumble.com/basic) 
+ - [colorcrumble.com/1](http://colorcrumble.com/1) 
+ - [colorcrumble.com/2](http://colorcrumble.com/2) 
+
 Setup 
 -----------
 To run and develop Colorcrumble localy follow these simple steps:
