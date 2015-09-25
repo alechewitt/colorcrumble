@@ -1,9 +1,14 @@
 "use strict";
 
-import counters from "./counters.js";
 import GraphicsContext from "./graphics-context.js";
 import Circle from "./circle.js";
 import InputHandler from "./input-handler.js";
+
+// Import all the different levels
+import levelBasic from "./levels/basic.js";
+import levelOne from "./levels/1.js";
+import levelTwo from "./levels/2.js";
+
 
 
 const ACCELERATION = 9.8;
@@ -17,11 +22,12 @@ const COEF_RESTITUTION = 0.5;
 
 export default class Game {
 
-    constructor(canvasId, canvasWidth, canvasHeight, scoreCallback) {
+    constructor(canvasId, canvasWidth, canvasHeight, scoreCallback, level) {
         this.graphicsCtx = new GraphicsContext(canvasId, canvasWidth, canvasHeight);
         this.devicePixelRatio = this.graphicsCtx.getDevicePixelRatio();
 
         // Game Variables
+        this.counters = this.setCounters(level);
         this.margin = 7 * this.devicePixelRatio;
         this.circlesPerRow = 0;
         this.numRows = 0;
@@ -65,7 +71,7 @@ export default class Game {
         let circleKeys = this.createGameGridObj();
         this.graphicsCtx.setCircleKeys(circleKeys);
         let self = this;
-        this.graphicsCtx.loadTextures(counters).
+        this.graphicsCtx.loadTextures(this.counters).
             then(function () {
                 //We have loaded all the textures, now draw the circles
                 self.graphicsCtx.drawCircles(self.circles);
@@ -77,6 +83,16 @@ export default class Game {
             });
     }
 
+    setCounters(level) {
+        switch (level) {
+            case "basic":
+                return levelBasic;
+            case "2":
+                return levelTwo;
+            default:
+                return levelOne;
+        }
+    }
     /**
      * Calculates the width in pixels of our circular counters
      */
@@ -121,8 +137,8 @@ export default class Game {
             for (let k = 0; k < this.circlesPerRow; k++) {
                 let colKey = "col_" + k;
                 // Random counter:
-                let counterInt = Math.floor(Math.random() * counters.length);
-                let counter = counters[counterInt];
+                let counterInt = Math.floor(Math.random() * this.counters.length);
+                let counter = this.counters[counterInt];
 
                 // Create a new circle
                 let circle = new Circle(counter);
@@ -605,8 +621,8 @@ export default class Game {
 
             for (let rowIndex = colObj.numberCircles - 1; rowIndex >= 0; rowIndex--) {
                 // Get a new random counter
-                let counterInt = Math.floor(Math.random() * counters.length);
-                let counter = counters[counterInt];
+                let counterInt = Math.floor(Math.random() * this.counters.length);
+                let counter = this.counters[counterInt];
 
                 // Create a new circle to be added to the object at the top
                 let newCircle = new Circle(counter);

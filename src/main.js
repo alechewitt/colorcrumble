@@ -14,7 +14,8 @@ window.onload = function() {
         "gameCanvas",
         window.innerWidth,
         window.innerHeight - canvasBounding.top,
-        scoreUpdateCallback
+        scoreUpdateCallback,
+        location.pathname.substring(1)
     );
 
     window.GAME = game;

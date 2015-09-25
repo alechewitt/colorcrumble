@@ -1,4 +1,4 @@
-import * as colors from "./color-options.js";
+import * as colors from "./../color-options.js";
 export default [
     // Red Group
     {
